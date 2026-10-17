@@ -264,3 +264,5 @@ a.btn,a.row{text-decoration:none;color:inherit}a.btn.primary,a.btn.danger{color:
 .scroll>*{flex-shrink:0}
 .screen.night .hdr h1,.screen.sos-bg .hdr h1{color:#fff}
 .sheet>*{flex-shrink:0}
+
+.key{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}

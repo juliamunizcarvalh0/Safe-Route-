@@ -195,11 +195,14 @@ register('calc', () => ({
       show();
     };
     $$('.key', el).forEach(b => { if (b.dataset.k !== '=') b.onclick = () => press(b.dataset.k); });
-    // segurar "=" por 2s volta ao app
-    const eq = $('[data-k="="]', el); let t;
-    const down = e => { e.preventDefault(); t = setTimeout(() => { t = null; vibrate(80); r.reset('home', {}, 'fade'); }, 2000); };
-    const up = () => { if (t) { clearTimeout(t); t = null; press('='); } };
-    eq.addEventListener('pointerdown', down); ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => eq.addEventListener(ev, up));
+    // sair: segurar "=" por 1,5 s  OU  digitar 1234 e tocar em "="
+    const eq = $('[data-k="="]', el); let t = null;
+    const leave = () => { vibrate(80); r.reset('home', {}, 'fade'); };
+    const down = e => { e.preventDefault(); if (t) return; t = setTimeout(() => { t = null; leave(); }, 1500); };
+    const up = () => { if (t) { clearTimeout(t); t = null; if (cur === '1234' && !op) leave(); else press('='); } };
+    eq.addEventListener('pointerdown', down);
+    eq.addEventListener('pointerup', up);
+    eq.addEventListener('contextmenu', e => e.preventDefault());
     eq.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); down(e); } });
     eq.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') up(); });
     show(); return () => clearTimeout(t);

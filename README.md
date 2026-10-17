@@ -30,6 +30,6 @@ No celular, abra o link e use **Adicionar à tela inicial** para instalar como a
 
 ## Estrutura
 `index.html` · `css/app.css` (tokens do Figma) · `js/` (`router`, `store`, `net`, `score`, `map`, `screens/*`) · `sw.js` e `manifest.webmanifest` (PWA).
-Modo discreto: abre como calculadora; **segure "=" por 2 s** para voltar.
+Modo discreto: abre como calculadora; **segure "=" por 1,5 s** (ou digite `1234` e toque em "=") para voltar.
 
 Créditos: © OpenStreetMap contributors, © CARTO, Leaflet (BSD-2), fontes DM Sans e Fraunces (OFL).
