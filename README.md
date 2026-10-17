@@ -15,7 +15,7 @@ Para testar local: `python3 -m http.server 8000` e abra `http://localhost:8000`.
 No celular, abra o link e use **Adicionar à tela inicial** para instalar como app. No computador aparece dentro de uma moldura de celular.
 
 ## O que é real
-- Mapa interativo (OpenStreetMap via CARTO) e busca de endereços (Nominatim, com Photon de reserva).
+- Mapa interativo (tiles do OpenStreetMap) e busca de endereços (Nominatim, com Photon de reserva).
 - Rotas a pé (OSRM), até 3 alternativas.
 - Iluminação, comércio aberto e tipo de via vindos do OpenStreetMap (Overpass) alimentam o score.
 - GPS real (com sua permissão), voz (Web Speech), vibração, ligação (190/180/192/100) e WhatsApp.
@@ -32,4 +32,4 @@ No celular, abra o link e use **Adicionar à tela inicial** para instalar como a
 `index.html` · `css/app.css` (tokens do Figma) · `js/` (`router`, `store`, `net`, `score`, `map`, `screens/*`) · `sw.js` e `manifest.webmanifest` (PWA).
 Modo discreto: abre como calculadora; **segure "=" por 1,5 s** (ou digite `1234` e toque em "=") para voltar.
 
-Créditos: © OpenStreetMap contributors, © CARTO, Leaflet (BSD-2), fontes DM Sans e Fraunces (OFL).
+Créditos: © OpenStreetMap contributors, Leaflet (BSD-2), fontes DM Sans e Fraunces (OFL).

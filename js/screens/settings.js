@@ -6,7 +6,7 @@ import { a11yControls, bindA11y } from './onboarding.js';
 
 register('me', () => {
   const st = store.get();
-  const items = [['access', 'Acessibilidade', 'Letra, contraste, voz, movimento', 'a11y', ''], ['lock', 'Privacidade e dados', 'Permissões, exportar e apagar', 'privacy', ''], ['users', 'Participação', 'Ajude a melhorar o SafeRoute', 'participate', ''], ['eyeoff', 'Modo discreto', 'Esconde o app como calculadora', 'calc', ''], ['info', 'Sobre o SafeRoute', 'Versão, fontes e créditos', 'about', '']];
+  const items = [['access', 'Acessibilidade', 'Letra, contraste, voz, movimento', 'a11y', ''], ['lock', 'Privacidade e dados', 'Permissões, exportar e apagar', 'privacy', ''], ['users', 'Participação', 'Ajude a melhorar o SafeRoute', 'participate', ''], ['eyeoff', 'Modo discreto', 'Calculadora. Sair: digite 1234 e toque em =, ou segure =', 'calc', ''], ['info', 'Sobre o SafeRoute', 'Versão, fontes e créditos', 'about', '']];
   return {
     opts: { tabs: true },
     html: `<div class="scroll tabs" style="gap:1rem">${header('Perfil', { back: false })}
@@ -39,7 +39,7 @@ register('privacy', () => {
       <p class="lead">${T('Você manda nos seus dados (LGPD). Mude de ideia quando quiser.', 'Você manda nos seus dados.')}</p>
       <div class="row"><div class="tile">${ic('locate', 22)}</div><div class="grow"><div class="strong">Usar minha localização</div><div class="small">Só para mostrar onde você está e guiar.</div></div>${toggle('p-loc', c.location, 'Usar minha localização')}</div>
       <div class="row"><div class="tile">${ic('flag', 22)}</div><div class="grow"><div class="strong">Contribuir com relatos</div><div class="small">Permite criar relatos anônimos.</div></div>${toggle('p-rep', c.reports, 'Contribuir com relatos')}</div>
-      <div class="card alt" style="box-shadow:none"><div class="strong">O que fica guardado</div><div class="small">Neste aparelho (localStorage): preferências, locais salvos, contatos, relatos e histórico de caminhadas. <b>Nada disso é enviado a um servidor do SafeRoute.</b></div><div class="strong" style="margin-top:.5rem">O que sai do aparelho</div><div class="small">Ao buscar um endereço ou calcular rota, o trecho necessário é consultado em serviços abertos (OpenStreetMap/Nominatim, OSRM, Overpass, CARTO) — esses serviços podem registrar seu IP. Avisos pelo WhatsApp só acontecem quando você toca em enviar.</div></div>
+      <div class="card alt" style="box-shadow:none"><div class="strong">O que fica guardado</div><div class="small">Neste aparelho (localStorage): preferências, locais salvos, contatos, relatos e histórico de caminhadas. <b>Nada disso é enviado a um servidor do SafeRoute.</b></div><div class="strong" style="margin-top:.5rem">O que sai do aparelho</div><div class="small">Ao buscar um endereço ou calcular rota, o trecho necessário é consultado em serviços abertos (OpenStreetMap/Nominatim, OSRM, Overpass) — esses serviços podem registrar seu IP. Avisos pelo WhatsApp só acontecem quando você toca em enviar.</div></div>
       <button class="btn soft" id="exp">${ic('download', 18)} Exportar meus dados (JSON)</button>
       <button class="btn dangerline" id="wipe">${ic('trash', 18)} Apagar tudo e recomeçar</button></div>`,
     mount(el, r) {
@@ -76,8 +76,8 @@ register('about', () => ({
   opts: {},
   html: `<div class="scroll" style="gap:1rem">${header('Sobre o SafeRoute')}
     <div class="card"><div class="head">Protótipo funcional · IHC · UFABC</div><div class="small">Versão 1.0. Projeto acadêmico de navegação urbana segura para mulheres. <b>Não substitui serviços de emergência</b> — em perigo, ligue 190.</div></div>
-    <div class="card"><div class="head">Sobre os dados</div><div class="small"><b>Mapa, busca e rotas</b>: OpenStreetMap (ODbL), CARTO, Nominatim e OSRM. <b>Iluminação e comércio</b>: OpenStreetMap via Overpass. <b>Ocorrências e relatos de exemplo</b>: dados ilustrativos criados para a demonstração — não são estatísticas oficiais. A cobertura do score de risco é apenas da Grande São Paulo.</div></div>
+    <div class="card"><div class="head">Sobre os dados</div><div class="small"><b>Mapa, busca e rotas</b>: OpenStreetMap (ODbL), Nominatim e OSRM. <b>Iluminação e comércio</b>: OpenStreetMap via Overpass. <b>Ocorrências e relatos de exemplo</b>: dados ilustrativos criados para a demonstração — não são estatísticas oficiais. A cobertura do score de risco é apenas da Grande São Paulo.</div></div>
     <div class="card"><div class="head">Limites desta versão</div><div class="small">Sem servidor: avisos a contatos e SOS são abertos no WhatsApp/telefone e dependem do seu toque. Não há transmissão de áudio nem compartilhamento ao vivo. A caminhada usa simulação por padrão; o GPS real é opcional.</div></div>
-    <div class="small center">Mapas © OpenStreetMap contributors © CARTO · Leaflet · Fontes: DM Sans e Fraunces (OFL)</div></div>`,
+    <div class="small center">Mapas © OpenStreetMap contributors · Leaflet · Fontes: DM Sans e Fraunces (OFL)</div></div>`,
   mount() {}
 }));

@@ -205,6 +205,21 @@ register('calc', () => ({
     eq.addEventListener('contextmenu', e => e.preventDefault());
     eq.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); down(e); } });
     eq.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') up(); });
-    show(); return () => clearTimeout(t);
+    // teclado (computador)
+    const MAP = { '*': '×', 'x': '×', '/': '÷', '-': '−', '+': '+', '.': ',', ',': ',', 'Enter': '=', '=': '=', 'Escape': 'AC', 'c': 'AC', 'C': 'AC', '%': '%' };
+    const onKey = e => {
+      if (e.target.closest && e.target.closest('button')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      let k = e.key;
+      if (k === 'Backspace') { cur = cur.length > 1 && !fresh ? cur.slice(0, -1) : '0'; show(); e.preventDefault(); return; }
+      if (/^\d$/.test(k)) press(k); else if (MAP[k]) { if (MAP[k] === '=' && cur === '1234' && !op) return leave(); press(MAP[k]); } else return;
+      e.preventDefault();
+    };
+    document.addEventListener('keydown', onKey);
+    // também sai segurando o visor por 1,5 s
+    let dt = null; const dsp = $('#cd', el);
+    dsp.addEventListener('pointerdown', () => { dt = setTimeout(() => { dt = null; leave(); }, 1500); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => dsp.addEventListener(ev, () => { clearTimeout(dt); dt = null; }));
+    show(); return () => { clearTimeout(t); clearTimeout(dt); document.removeEventListener('keydown', onKey); };
   }
 }));

@@ -2,8 +2,13 @@ import { $, toast } from './ui.js';
 import { here } from './geo.js';
 let map, tiles, scene, night = false, tileErr = 0, warned = false;
 const L_ = () => window.L;
-const TILE = n => `https://{s}.basemaps.cartocdn.com/${n ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`;
-const ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>';
+// Mapa-base: tiles padrão do OpenStreetMap (sem chave). Reserva: OSM França (HOT).
+const SOURCES = [
+  { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', sub: '' },
+  { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', sub: 'abc' }
+];
+const ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+let src = 0, okTiles = 0;
 export function init() {
   if (map || !L_()) return map;
   map = L_().map('map', { zoomControl: false, attributionControl: true, zoomSnap: 0.5, tap: true, inertia: true }).setView([here.lat, here.lon], 15);
@@ -14,17 +19,21 @@ export function init() {
 }
 function setTiles() {
   if (tiles) map.removeLayer(tiles);
-  tiles = L_().tileLayer(TILE(night), { subdomains: 'abcd', maxZoom: 19, attribution: ATTR, crossOrigin: true });
-  tiles.on('tileerror', () => { tileErr++; if (tileErr === 6 && !warned) { warned = true; toast('Não consegui carregar o mapa. Verifique sua conexão.', 'alert', 4200); } });
-  tiles.on('tileload', () => { tileErr = 0; });
+  const s = SOURCES[src];
+  tiles = L_().tileLayer(s.url, { subdomains: s.sub || 'abc', maxZoom: 19, attribution: ATTR, crossOrigin: true });
+  tiles.on('tileerror', () => {
+    tileErr++;
+    if (tileErr === 5 && !okTiles && src < SOURCES.length - 1) { src++; tileErr = 0; setTiles(); return; }
+    if (tileErr === 6 && !warned) { warned = true; toast('Não consegui carregar o mapa. Verifique sua conexão.', 'alert', 4200); }
+  });
+  tiles.on('tileload', () => { tileErr = 0; okTiles++; });
   tiles.addTo(map);
-  $('#map').classList.toggle('night-map', night);
 }
 export function show(on) {
   const el = $('#map');
   if (on) { init(); el.classList.add('on'); setTimeout(() => map && map.invalidateSize(), 30); } else el.classList.remove('on');
 }
-export function setNight(n) { n = !!n; if (n !== night) { night = n; if (map) setTiles(); } }
+export function setNight(n) { night = !!n; $('#map').classList.toggle('night-map', night); }
 export const get = () => map;
 export const group = () => { init(); return scene; };
 export function clear() { if (scene) scene.clearLayers(); }
