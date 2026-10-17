@@ -4,16 +4,6 @@ App web (PWA) de navegação a pé pensada para a segurança das mulheres. É o 
 
 Sem build, sem dependências para instalar: HTML + CSS + JavaScript (módulos ES). Leaflet e as fontes já estão em `vendor/` e `fonts/`.
 
-## Publicar no GitHub Pages
-1. Crie um repositório no GitHub e envie estes arquivos (`git init`, `git add .`, `git commit`, `git push` — ou arraste os arquivos pela página do repositório).
-2. No repositório: **Settings › Pages › Build and deployment › Source: GitHub Actions**.
-3. O workflow `.github/workflows/pages.yml` publica a cada push na `main`. O endereço será `https://SEU-USUARIO.github.io/NOME-DO-REPO/`.
-   (Alternativa sem Actions: Source = *Deploy from a branch* › `main` › `/ (root)`.)
-
-Para testar local: `python3 -m http.server 8000` e abra `http://localhost:8000`. (Precisa de servidor; abrir o `index.html` direto do disco não funciona por causa dos módulos.)
-
-No celular, abra o link e use **Adicionar à tela inicial** para instalar como app. No computador aparece dentro de uma moldura de celular.
-
 ## O que é real
 - Mapa interativo (tiles do OpenStreetMap) e busca de endereços (Nominatim, com Photon de reserva).
 - Rotas a pé (OSRM), até 3 alternativas.
@@ -30,6 +20,6 @@ No celular, abra o link e use **Adicionar à tela inicial** para instalar como a
 
 ## Estrutura
 `index.html` · `css/app.css` (tokens do Figma) · `js/` (`router`, `store`, `net`, `score`, `map`, `screens/*`) · `sw.js` e `manifest.webmanifest` (PWA).
-Modo discreto: abre como calculadora; **segure "=" por 1,5 s** (ou digite `1234` e toque em "=") para voltar.
+Modo discreto: abre como calculadora; digite `1234` e toque em "="
 
 Créditos: © OpenStreetMap contributors, Leaflet (BSD-2), fontes DM Sans e Fraunces (OFL).
