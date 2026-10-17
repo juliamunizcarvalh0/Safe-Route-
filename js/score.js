@@ -67,7 +67,7 @@ export function analyze(route, osm, reports, night) {
   }
   let tw = 0, ts = 0;
   for (const k of Object.keys(W)) if (res.parts[k] != null) { tw += W[k]; ts += W[k] * res.parts[k]; }
-  res.score = tw >= .3 ? Math.round(100 * ts / tw) : null;
+  res.score = tw >= .2 ? Math.round(100 * ts / tw) : null;
   res.partial = Object.values(res.parts).some(v => v == null);
   res.refuges = res.refuges.slice(0, 6);
   res.weights = W;

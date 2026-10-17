@@ -6,7 +6,7 @@ import { here, requestGPS, hav, fmtDist, fmtMin, bboxOf } from '../geo.js';
 import { ic } from '../icons.js';
 import { analyze, label, PART_LABEL, WEIGHTS } from '../score.js';
 import { allReports, CATS, HOTSPOTS, LANDMARKS } from '../data.js';
-import { $, $$, T, esc, toast, debounce, modal, waLink, osmLink, vibrate } from '../ui.js';
+import { $, $$, T, esc, toast, debounce, modal, waLink, osmLink, vibrate, resizable } from '../ui.js';
 import { openReport } from './community.js';
 
 let gpsTried = false;
@@ -53,6 +53,7 @@ register('home', () => {
       const drawAll = () => { mapx.clear(); drawReports(store.get().settings.layers.reports); drawHotspots(store.get().settings.layers.hotspots); st.places.forEach(p => mapx.pin(p.lat, p.lon, { color: '#3B1766', svg: ic(placeIcon(p.kind), 16), size: 30 })); youM = mapx.L().marker([here.lat, here.lon], { icon: mapx.youIcon(), keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(mapx.group()); };
       let youM; drawAll();
       mapx.view(here.lat, here.lon, 15, 110, false);
+      resizable($('.sheet', el));
       $('[data-search]', el).onclick = () => r.go('search', { mode: 'dest' }, { anim: 'up' });
       $('[data-sos]', el).onclick = () => r.go('sos', {}, { anim: 'up' });
       $('[data-locate]', el).onclick = async () => {
@@ -77,7 +78,7 @@ async function askLocation(r) {
 /* ---------------- busca ---------------- */
 register('search', (p) => {
   const st = store.get();
-  const title = p.mode === 'save' ? (p.kind === 'home' ? 'Definir casa' : p.kind === 'work' ? 'Definir trabalho' : 'Novo favorito') : 'Para onde vamos?';
+  const title = p.title || (p.mode === 'save' ? (p.kind === 'home' ? 'Definir casa' : p.kind === 'work' ? 'Definir trabalho' : 'Novo favorito') : 'Para onde vamos?');
   return {
     opts: {},
     html: `<div class="scroll" style="gap:1rem"><div class="hdr"><button class="iconbtn" data-back aria-label="Voltar">${ic('back', 22)}</button><h1 class="grow" tabindex="-1" style="font-family:Fraunces,serif;font-size:1.25rem;color:var(--plum);font-weight:600">${title}</h1></div>
@@ -88,6 +89,7 @@ register('search', (p) => {
       let ctl, results = [];
       const row = (it, i, icon = 'pin') => `<button class="sugg" data-i="${i}"><div class="tile alt">${ic(icon, 20)}</div><div class="grow"><div class="strong">${esc(it.name)}</div><div class="small">${esc(it.sub || '')}${it.dist != null ? ' · ' + fmtDist(it.dist) : ''}</div></div></button>`;
       const choose = it => {
+        if (p.mode === 'pick') { p.onChoose(it); return; }
         if (p.mode === 'save') {
           store.update(s => { if (p.kind !== 'fav') s.places = s.places.filter(x => x.kind !== p.kind); s.places.push({ id: store.uid(), kind: p.kind, name: it.name, sub: it.sub, lat: it.lat, lon: it.lon }); });
           toast('Salvo', 'check'); r.back('down');
@@ -100,7 +102,8 @@ register('search', (p) => {
       const mapRow = `<button class="sugg" data-pick><div class="tile">${ic('pin', 20)}</div><div class="grow strong">Escolher no mapa</div>${ic('right', 18)}</button>`;
       const home = () => {
         results = [...st.places.map(p => ({ ...p })), ...st.recents];
-        res.innerHTML = mapRow + (results.length ? `<div class="over" style="margin:.75rem 0 .25rem">Salvos e recentes</div>` + results.map((it, i) => row(it, i, it.kind ? placeIcon(it.kind) : 'clock')).join('') : `<div class="small" style="padding:.75rem .25rem">Digite um endereço ou lugar. A busca usa dados abertos do OpenStreetMap.</div>`);
+        if (p.mode === 'pick' && p.allowHere) { results.unshift({ name: 'Minha localização', sub: here.source === 'gps' ? 'GPS' : 'Local de demonstração', lat: here.lat, lon: here.lon, isHere: true }); }
+        res.innerHTML = mapRow + (results.length ? `<div class="over" style="margin:.75rem 0 .25rem">Salvos e recentes</div>` + results.map((it, i) => row(it, i, it.isHere ? 'locate' : it.kind ? placeIcon(it.kind) : 'clock')).join('') : `<div class="small" style="padding:.75rem .25rem">Digite um endereço ou lugar. A busca usa dados abertos do OpenStreetMap.</div>`);
         bindRows(); bindPick();
       };
       const bindPick = () => { const b = $('[data-pick]', res); if (b) b.onclick = () => r.go('pick', { title: 'Escolher no mapa', confirm: 'Usar este local', onPick: place => { r.back(); setTimeout(() => choose(place), 60); } }); };
@@ -158,21 +161,37 @@ const COLORS = { 'Mais segura': '#0F8A62', 'Equilibrada': '#3B1766', 'Mais rápi
 const bg = c => c; 
 register('routes', (p) => {
   const dest = p.dest;
+  if (!p.origin || p.origin.isHere) p.origin = { name: 'Minha localização', sub: here.source === 'gps' ? 'GPS' : 'Local de demonstração', lat: here.lat, lon: here.lon, isHere: true };
+  const org = p.origin;
   return {
     opts: { map: true },
     html: `<div class="topbar"><button class="iconbtn hit" data-back aria-label="Voltar">${ic('back', 22)}</button>
-      <div class="card hit grow" style="padding:.625rem 1rem;box-shadow:var(--shadow-lg);gap:.1rem"><div class="small">Rota a pé até</div><div class="strong" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(dest.name)}</div></div></div>
-      <div class="sheet" id="sheet" style="max-height:64%"><div class="grab"></div><div id="body" class="stack"></div></div>`,
+      <div class="card hit grow" style="padding:.375rem .5rem .375rem .75rem;box-shadow:var(--shadow-lg);gap:0;flex-direction:row;align-items:center">
+        <div class="grow" style="min-width:0">
+          <button class="hrow" data-edit="origin" style="width:100%;min-height:var(--tap)" aria-label="Alterar ponto de partida: ${esc(org.name)}"><span class="dot" style="--rc:var(--safe);width:.75rem;height:.75rem"></span><span class="grow" style="min-width:0"><span class="cap" style="display:block">De</span><span class="strong" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(org.name)}</span></span></button>
+          <div class="hr" style="margin:0 0 0 1.5rem"></div>
+          <button class="hrow" data-edit="dest" style="width:100%;min-height:var(--tap)" aria-label="Alterar destino: ${esc(dest.name)}">${ic('pin', 14)}<span class="grow" style="min-width:0"><span class="cap" style="display:block">Para</span><span class="strong" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(dest.name)}</span></span></button>
+        </div>
+        <button class="iconbtn" data-swap aria-label="Inverter origem e destino" style="box-shadow:none;background:var(--rose-soft);color:var(--rose-text);margin-left:.25rem">${ic('uturn', 20)}</button>
+      </div></div>
+      <div class="sheet" id="sheet" style="max-height:60%"><div class="grab"></div><div id="body" class="stack"></div></div>`,
     mount(el, r) {
       mapx.clear(); const map = mapx.get(), L = mapx.L(), grp = mapx.group();
       const body = $('#body', el); let alive = true, ctl = new AbortController();
       let list = [], sel = 0, lines = [], osm = null, osmFail = false, estimated = false;
-      const o = { lat: here.lat, lon: here.lon };
+      const o = { lat: org.lat, lon: org.lon };
       const D = hav([o.lat, o.lon], [dest.lat, dest.lon]);
-      mapx.L().marker([o.lat, o.lon], { icon: mapx.youIcon(), keyboard: false, interactive: false }).addTo(grp);
+      $$('[data-edit]', el).forEach(b => b.onclick = () => {
+        const which = b.dataset.edit;
+        r.go('search', { mode: 'pick', allowHere: which === 'origin', title: which === 'origin' ? 'Ponto de partida' : 'Destino', onChoose: it => { p[which === 'origin' ? 'origin' : 'dest'] = it; if (which === 'dest') store.update(s => { s.recents = [it, ...s.recents.filter(x => x.name !== it.name)].slice(0, 6); }); r.back(); } }, { anim: 'up' });
+      });
+      $('[data-swap]', el).onclick = () => { const t = p.origin; p.origin = p.dest; p.dest = t; r.refresh(); };
+      if (org.isHere) mapx.L().marker([o.lat, o.lon], { icon: mapx.youIcon(), keyboard: false, interactive: false }).addTo(grp);
+      else mapx.pin(o.lat, o.lon, { color: '#0F8A62', svg: ic('walk', 18), size: 36 });
       mapx.pin(dest.lat, dest.lon, { color: '#3B1766', svg: ic('pin', 18), size: 36 });
+      resizable($('#sheet', el), { onChange: () => fitAll(list[sel]?.coords) });
       const sheetH = () => $('#sheet', el).offsetHeight + 10;
-      const fitAll = (coords) => { try { const b = bboxOf(coords || [[o.lon, o.lat], [dest.lon, dest.lat]], 0.0004); mapx.fit([[b[0], b[1]], [b[2], b[3]]], { top: 130, bottom: Math.min(sheetH(), 520) + 24, maxZoom: 17 }); } catch {} };
+      const fitAll = (coords) => { try { const b = bboxOf(coords || [[o.lon, o.lat], [dest.lon, dest.lat]], 0.0004); mapx.fit([[b[0], b[1]], [b[2], b[3]]], { top: 175, bottom: Math.min(sheetH(), 520) + 24, maxZoom: 17 }); } catch {} };
       const loading = (msg) => { body.innerHTML = `<div class="hrow">${ic('loader', 22, 'spin')}<div class="grow"><div class="head">${msg}</div><div class="small">Buscando caminhos a pé e dados da região…</div></div></div><div class="skeleton" style="height:5.5rem"></div><div class="skeleton" style="height:5.5rem"></div>`; fitAll(); };
       const draw = () => {
         lines.forEach(l => grp.removeLayer(l)); lines = [];
@@ -213,7 +232,7 @@ register('routes', (p) => {
           <div class="hrow"><button class="btn soft" data-why>${ic('info', 18)} Por que esse score?</button><button class="iconbtn" data-share aria-label="Compartilhar rota" style="background:var(--rose-soft);color:var(--rose-text);box-shadow:none">${ic('share', 20)}</button></div>`;
         $$('[data-r]', body).forEach(b => b.onclick = () => { sel = +b.dataset.r; draw(); render(); vibrate(8); });
         $$('[data-time]', body).forEach(b => b.onclick = () => { store.update(s => s.settings.time = b.dataset.time); score(); assign(); sel = 0; draw(); render(); });
-        $('[data-start]', body).onclick = () => r.go('nav', { route: cur, dest }, { anim: 'up' });
+        $('[data-start]', body).onclick = () => r.go('nav', { route: cur, dest, custom: !org.isHere }, { anim: 'up' });
         $('[data-why]', body).onclick = () => scoreModal(cur, night());
         $('[data-share]', body).onclick = () => { const t = `Estou indo para ${dest.name} a pé (${fmtMin(cur.dur)}). Destino: ${osmLink(dest.lat, dest.lon)} — via SafeRoute`; window.open(waLink(t), '_blank', 'noopener'); };
         requestAnimationFrame(() => fitAll(cur.coords)); setTimeout(() => alive && fitAll(cur.coords), 500);
@@ -228,7 +247,7 @@ register('routes', (p) => {
         list.forEach((x, i) => x.label = ['Mais segura', 'Equilibrada', 'Mais rápida'][i]); list.forEach(x => x.a = { score: null, parts: {} });
         draw(); fitAll(list[0].coords);
         loading('Avaliando a segurança de cada caminho…');
-        try { osm = estimated ? null : await net.osmAround(list.flatMap(x => x.coords), { signal: ctl.signal }); osmFail = !osm; } catch { osm = null; osmFail = !estimated; }
+        try { osm = estimated ? null : await net.osmAround(list.map(x => x.coords), { signal: ctl.signal }); osmFail = !osm; } catch { osm = null; osmFail = !estimated; }
         if (!alive) return;
         score(); assign(); sel = 0; draw(); render();
       })();

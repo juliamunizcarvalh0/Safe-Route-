@@ -268,3 +268,8 @@ a.btn,a.row{text-decoration:none;color:inherit}a.btn.primary,a.btn.danger{color:
 .sheet>*{flex-shrink:0}
 
 .key{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+.sheet .grab.handle{position:relative;cursor:ns-resize;touch-action:none;width:3rem;height:.3125rem;flex:none}
+.sheet .grab.handle::before{content:"";position:absolute;left:-4rem;right:-4rem;top:-.9rem;bottom:-1rem}
+.sheet .grab.handle:focus-visible{outline:3px solid var(--rose);outline-offset:4px}
+.sheet{will-change:height}

@@ -4,7 +4,7 @@ import * as mapx from '../map.js';
 import { here, cumulative, pointAt, makeProj, distPtSeg, hav, fmtDist, fmtMin } from '../geo.js';
 import { ic } from '../icons.js';
 import { label } from '../score.js';
-import { $, $$, T, esc, toast, modal, confirmDialog, speak, vibrate, waLink, osmLink, announce } from '../ui.js';
+import { $, $$, T, esc, toast, modal, confirmDialog, speak, vibrate, waLink, osmLink, announce, resizable } from '../ui.js';
 
 const MODS = { 'slight left': 'upleft', 'slight right': 'upright', left: 'left', right: 'rightturn', 'sharp left': 'left', 'sharp right': 'rightturn', uturn: 'uturn', straight: 'up' };
 const TXT = { left: 'Vire à esquerda', right: 'Vire à direita', 'slight left': 'Siga levemente à esquerda', 'slight right': 'Siga levemente à direita', 'sharp left': 'Faça a curva fechada à esquerda', 'sharp right': 'Faça a curva fechada à direita', uturn: 'Faça o retorno', straight: 'Siga em frente' };
@@ -59,6 +59,7 @@ register('nav', (p) => {
       </div>`,
     mount(el, r) {
       mapx.clear(); const map = mapx.get(), L = mapx.L(), grp = mapx.group();
+      resizable($('.sheet', el));
       const coords = rt.coords, cum = cumulative(coords), total = cum[cum.length - 1];
       const sumS = rt.steps.reduce((a, s) => a + s.dist, 0) || total, k = total / sumS;
       let acc = 0; const starts = rt.steps.map(s => { const v = acc * k; acc += s.dist; return v; });
@@ -68,7 +69,7 @@ register('nav', (p) => {
       const ahead = L.polyline(ll, { color: '#D6336C', weight: 7, lineCap: 'round', lineJoin: 'round' }).addTo(grp);
       mapx.pin(dest.lat, dest.lon, { color: '#3B1766', svg: ic('pin', 18), size: 36 });
       const you = L.marker(ll[0], { icon: mapx.youIcon(true), keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(grp);
-      let s = 0, mult = 1, mode = here.source === 'gps' ? 'gps' : 'sim', follow = true, timer, watch, ended = false, announced = new Set(), t0 = Date.now(), firstView = true, lastOff = false;
+      let s = 0, mult = 1, mode = (here.source === 'gps' && !p.custom) ? 'gps' : 'sim', follow = true, timer, watch, ended = false, announced = new Set(), t0 = Date.now(), firstView = true, lastOff = false;
       const setMode = m => {
         mode = m; $$('[data-m]', el).forEach(b => { const on = (m === 'gps' && b.dataset.m === 'gps') || (m === 'sim' && b.dataset.m === 'sim:' + mult); b.setAttribute('aria-checked', on); b.style.background = on ? '#fff' : 'var(--night)'; b.style.color = on ? 'var(--plum)' : '#fff'; });
         if (watch != null) { navigator.geolocation.clearWatch(watch); watch = null; }

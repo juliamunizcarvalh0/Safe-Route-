@@ -1,5 +1,5 @@
 // Acesso a serviços abertos: busca (Nominatim/Photon), rotas a pé (OSRM) e dados do OpenStreetMap (Overpass).
-import { here, hav, bearing, makeProj, distPtSeg, bboxOf } from './geo.js';
+import { here, hav, bearing, makeProj, distPtSeg } from './geo.js';
 async function getJSON(url, { signal, timeout = 12000, init } = {}) {
   const c = new AbortController(); const t = setTimeout(() => c.abort(), timeout);
   signal && signal.addEventListener('abort', () => c.abort());
@@ -89,12 +89,18 @@ export function straightRoute(from, to) { // último recurso: linha reta, claram
 }
 /* ---------- OpenStreetMap (Overpass) ---------- */
 const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-export async function osmAround(coords, { signal } = {}) {
-  const [s, w, n, e] = bboxOf(coords, 0.002); const bb = `${s.toFixed(5)},${w.toFixed(5)},${n.toFixed(5)},${e.toFixed(5)}`;
-  const ql = `[out:json][timeout:20];(way["highway"]["lit"](${bb});way["highway"~"^(footway|path|steps|track|pedestrian|living_street)$"](${bb});node["highway"="street_lamp"](${bb});node["amenity"~"^(pharmacy|police|hospital|clinic|restaurant|cafe|bar|pub|fast_food|fuel|bank)$"](${bb});node["shop"~"^(convenience|supermarket|bakery|mall)$"](${bb});node["railway"~"^(station|subway_entrance)$"](${bb});node["public_transport"="stop_position"](${bb}););out geom tags qt;`;
+export async function osmAround(routeCoords, { signal } = {}) { // routeCoords: lista de rotas ([[lon,lat],...])
+  const poly = coords => { // amostra ~1 ponto a cada 100–200 m, no máx. 80 pontos
+    const step = Math.max(1, Math.ceil(coords.length / 80)); const pts = [];
+    for (let i = 0; i < coords.length; i += step) pts.push(coords[i]); pts.push(coords[coords.length - 1]);
+    return pts.map(c => c[1].toFixed(5) + ',' + c[0].toFixed(5)).join(',');
+  };
+  const parts = routeCoords.map(poly);
+  const st = (sel, r) => parts.map(pl => `${sel}(around:${r},${pl});`).join('');
+  const ql = `[out:json][timeout:25];(${st('way["highway"]["lit"]', 25)}${st('way["highway"~"^(footway|path|steps|track|pedestrian|living_street)$"]', 25)}${st('node["highway"="street_lamp"]', 40)}${st('node["amenity"~"^(pharmacy|police|hospital|clinic|restaurant|cafe|bar|pub|fast_food|fuel|bank)$"]', 100)}${st('node["shop"~"^(convenience|supermarket|bakery|mall)$"]', 100)}${st('node["railway"~"^(station|subway_entrance)$"]', 100)}${st('node["public_transport"="stop_position"]', 60)});out geom tags qt;`;
   let err;
   for (const u of OVP) {
-    try { const j = await getJSON(u, { signal, timeout: 22000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } }); return j.elements || []; }
+    try { const j = await getJSON(u, { signal, timeout: 28000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } }); return j.elements || []; }
     catch (e) { err = e; if (signal?.aborted) throw e; }
   }
   throw err;

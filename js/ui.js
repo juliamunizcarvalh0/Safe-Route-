@@ -62,3 +62,43 @@ export function bindToggle(el, fn) { el.addEventListener('click', () => { const 
 export function header(title, { back = true, right = '' } = {}) {
   return `<div class="hdr">${back ? `<button class="iconbtn" data-back aria-label="Voltar">${ic('back', 22)}</button>` : ''}<h1 class="grow" tabindex="-1">${esc(title)}</h1>${right}</div>`;
 }
+
+// Painel (bottom sheet) que o usuário pode arrastar pela alça: recolhido · padrão · expandido
+export function resizable(sheet, { onChange } = {}) {
+  const handle = $('.grab', sheet); if (!handle) return;
+  handle.classList.add('handle'); handle.setAttribute('role', 'button'); handle.tabIndex = 0;
+  handle.setAttribute('aria-label', 'Redimensionar painel. Arraste ou use as setas para cima e para baixo.');
+  const H = () => (sheet.parentElement?.clientHeight || 844);
+  const base = { max: sheet.style.maxHeight };
+  let custom = false;
+  const natural = () => { const h0 = sheet.style.height, m0 = sheet.style.maxHeight; sheet.style.transition = 'none'; sheet.style.height = 'auto'; sheet.style.maxHeight = base.max || ''; const n = sheet.offsetHeight; sheet.style.height = h0; sheet.style.maxHeight = m0; return n; };
+  const snaps = () => { const full = Math.round(H() * .78), nat = Math.min(natural(), Math.round(H() * .66)), peek = Math.min(150, nat); return [...new Set([peek, nat, full])].sort((a, b) => a - b); };
+  const apply = (h, animate = true) => {
+    sheet.style.transition = animate ? 'height .38s cubic-bezier(.22,1,.36,1)' : 'none';
+    sheet.style.maxHeight = 'none'; sheet.style.height = h + 'px'; custom = true;
+    if (animate) setTimeout(() => onChange && onChange(h), 400);
+  };
+  let drag = null;
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault(); handle.setPointerCapture?.(e.pointerId);
+    const h = sheet.offsetHeight; drag = { y: e.clientY, h, sc: (sheet.getBoundingClientRect().height / h) || 1, moved: false, s: snaps() };
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!drag) return; const dy = (drag.y - e.clientY) / drag.sc; if (Math.abs(dy) > 3) drag.moved = true;
+    apply(Math.max(90, Math.min(H() * .8, drag.h + dy)), false);
+  });
+  const end = () => {
+    if (!drag) return; const d = drag; drag = null;
+    const cur = sheet.offsetHeight, list = d.s;
+    if (!d.moved) { const i = list.findIndex(v => v >= cur - 4); apply(list[(Math.max(0, i) + 1) % list.length]); return; }
+    // inércia simples: soltar perto de um ponto de parada
+    apply(list.reduce((a, b) => Math.abs(b - cur) < Math.abs(a - cur) ? b : a));
+  };
+  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+  handle.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault();
+    const list = snaps(), cur = sheet.offsetHeight, i = list.reduce((bi, v, k) => Math.abs(v - cur) < Math.abs(list[bi] - cur) ? k : bi, 0);
+    const n = e.key === 'ArrowUp' ? Math.min(list.length - 1, i + 1) : e.key === 'ArrowDown' ? Math.max(0, i - 1) : (i + 1) % list.length;
+    apply(list[n]);
+  });
+}
