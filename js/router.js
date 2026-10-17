@@ -23,7 +23,12 @@ function paintChrome(e) {
   tb.hidden = !showTabs;
   if (showTabs) tb.innerHTML = TABS.map(([id, label, icon]) => `<button class="tab" data-tab="${id}" ${e.name === id ? 'aria-current="page"' : ''}><span class="pill">${ic(icon, 24)}</span><span>${label}</span></button>`).join('');
   $$('#tabbar .tab').forEach(b => b.onclick = () => { if (e.name !== b.dataset.tab) tab(b.dataset.tab); });
-  $('#statusbar').classList.toggle('dark', !!(e.opts.night || e.opts.darkbar));
+  const sb = $('#statusbar');
+  sb.classList.toggle('dark', !!(e.opts.night || e.opts.darkbar));
+  // fundo sólido na barra de status: o conteúdo que rola passa por baixo dela, sem ficar por cima do relógio
+  const c = e.el.classList; let bg = 'transparent';
+  if (c.contains('calc')) bg = '#000'; else if (c.contains('sos-bg')) bg = '#5A0A24'; else if (c.contains('night')) bg = 'var(--night)'; else if (c.contains('opaque')) bg = 'var(--bg)';
+  sb.style.background = bg;
   mapx.show(!!e.opts.map);
   if (e.opts.map) mapx.setNight(!!e.opts.mapNight);
 }

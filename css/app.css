@@ -43,7 +43,7 @@ svg.i{display:inline-block;flex:none;stroke:currentColor;fill:none;stroke-width:
 #side li{padding-left:1.4rem;position:relative;color:var(--ink);font-size:.95rem}
 #side li::before{content:"";position:absolute;left:0;top:.5em;width:.7rem;height:.7rem;border-radius:50%;background:var(--rose)}
 #device{position:relative;width:390px;height:844px;flex:none;border-radius:54px;background:#000;padding:0;overflow:hidden;box-shadow:0 0 0 11px #1c1530,0 0 0 13px #4a3d6a,0 40px 90px rgba(59,23,102,.35);transform-origin:center center}
-#statusbar{position:absolute;z-index:60;top:0;left:0;right:0;height:47px;padding:15px 28px 0;display:flex;justify-content:space-between;font-weight:700;font-size:.8125rem;pointer-events:none;color:var(--ink);transition:color .3s}
+#statusbar{position:absolute;z-index:60;top:0;left:0;right:0;height:47px;padding:15px 28px 0;display:flex;justify-content:space-between;font-weight:700;font-size:.8125rem;pointer-events:none;color:var(--ink);transition:color .3s,background .3s}
 #statusbar.dark{color:#fff}
 .sb-icons{display:flex;gap:6px;align-items:center}.sb-icons i{width:3px;height:9px;background:currentColor;border-radius:1px;display:block}
 .sb-icons i:nth-child(1){height:5px}.sb-icons i:nth-child(2){height:7px}.sb-icons b{width:22px;height:11px;border:1.5px solid currentColor;border-radius:4px;position:relative;display:block}
