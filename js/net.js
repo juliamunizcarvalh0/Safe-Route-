@@ -60,24 +60,21 @@ function similar(a, b) {
 }
 export async function routes(from, to, { signal } = {}) {
   const ll = p => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`;
-  const D0 = hav([from.lat, from.lon], [to.lat, to.lon]) * 1.25; // estimativa para já disparar as variações junto com a rota principal
-  const reqs = [getJSON(`${OSRM}${ll(from)};${ll(to)}${q}true`, { signal, timeout: 10000 })];
-  if (D0 > 150) {
-    const brg = bearing([from.lat, from.lon], [to.lat, to.lon]);
-    const mid = [(from.lat + to.lat) / 2, (from.lon + to.lon) / 2];
-    const off = Math.min(Math.max(D0 * 0.22, 120), 600);
-    [brg + 90, brg - 90].forEach(b => {
-      const dl = off * Math.cos(b * Math.PI / 180) / 110574, dn = off * Math.sin(b * Math.PI / 180) / (111320 * Math.cos(mid[0] * Math.PI / 180));
-      reqs.push(getJSON(`${OSRM}${ll(from)};${ll({ lat: mid[0] + dl, lon: mid[1] + dn })};${ll(to)}${q}false`, { signal, timeout: 10000 }));
-    });
-  }
-  const res = await Promise.allSettled(reqs);
-  if (res[0].status !== 'fulfilled') throw res[0].reason;
-  const base = res[0].value;
+  const base = await getJSON(`${OSRM}${ll(from)};${ll(to)}${q}true`, { signal });
   if (base.code !== 'Ok') throw new Error(base.code || 'sem rota');
   let out = base.routes.map(r => norm(r));
   const D = out[0].dist;
-  res.slice(1).forEach(r => { if (r.status === 'fulfilled' && r.value.code === 'Ok') out.push(norm(r.value.routes[0], true)); });
+  if (D > 150) { // variações com ponto intermediário deslocado (caminhos alternativos)
+    const brg = bearing([from.lat, from.lon], [to.lat, to.lon]);
+    const mid = [(from.lat + to.lat) / 2, (from.lon + to.lon) / 2];
+    const off = Math.min(Math.max(D * 0.22, 120), 600);
+    const vias = [brg + 90, brg - 90].map(b => {
+      const dl = off * Math.cos(b * Math.PI / 180) / 110574, dn = off * Math.sin(b * Math.PI / 180) / (111320 * Math.cos(mid[0] * Math.PI / 180));
+      return { lat: mid[0] + dl, lon: mid[1] + dn };
+    });
+    const rs = await Promise.allSettled(vias.map(v => getJSON(`${OSRM}${ll(from)};${ll(v)};${ll(to)}${q}false`, { signal, timeout: 10000 })));
+    rs.forEach(r => { if (r.status === 'fulfilled' && r.value.code === 'Ok') out.push(norm(r.value.routes[0], true)); });
+  }
   const keep = [];
   for (const r of out) {
     if (r.dist > D * 1.7 + 350) continue;
@@ -91,33 +88,33 @@ export function straightRoute(from, to) { // último recurso: linha reta, claram
     steps: [{ type: 'depart', mod: '', name: '', dist: d, dur: d / 1.3, loc: [from.lon, from.lat] }, { type: 'arrive', mod: '', name: '', dist: 0, dur: 0, loc: [to.lon, to.lat] }] }];
 }
 /* ---------- OpenStreetMap (Overpass) ---------- */
-const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-const ovCache = new Map();
-async function overpass(ql, { signal, timeout = 14000 } = {}) { // consulta todos os espelhos ao mesmo tempo e usa o primeiro que responder
-  if (ovCache.has(ql)) return ovCache.get(ql);
-  const ctl = new AbortController(); signal && signal.addEventListener('abort', () => ctl.abort());
-  try {
-    const j = await Promise.any(OVP.map(u => getJSON(u, { signal: ctl.signal, timeout, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } })));
-    ovCache.set(ql, j); return j;
-  } catch (e) { if (signal?.aborted) throw e; throw (e.errors && e.errors[0]) || e; }
-  finally { ctl.abort(); }
-}
+const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 export async function osmAround(routeCoords, { signal } = {}) { // routeCoords: lista de rotas ([[lon,lat],...])
   const poly = coords => { // amostra ~1 ponto a cada 100–200 m, no máx. 80 pontos
-    const step = Math.max(1, Math.ceil(coords.length / 45)); const pts = [];
+    const step = Math.max(1, Math.ceil(coords.length / 80)); const pts = [];
     for (let i = 0; i < coords.length; i += step) pts.push(coords[i]); pts.push(coords[coords.length - 1]);
     return pts.map(c => c[1].toFixed(5) + ',' + c[0].toFixed(5)).join(',');
   };
   const parts = routeCoords.map(poly);
   const st = (sel, r) => parts.map(pl => `${sel}(around:${r},${pl});`).join('');
-  const ql = `[out:json][timeout:14];(${st('way["highway"]["lit"]', 25)}${st('way["highway"~"^(footway|path|steps|track|pedestrian|living_street)$"]', 25)}${st('node["highway"="street_lamp"]', 40)}${st('node["amenity"~"^(pharmacy|police|hospital|clinic|restaurant|cafe|bar|pub|fast_food|fuel|bank)$"]', 100)}${st('node["shop"~"^(convenience|supermarket|bakery|mall)$"]', 100)}${st('node["railway"~"^(station|subway_entrance)$"]', 100)}${st('node["public_transport"="stop_position"]', 60)});out geom tags qt;`;
-  const j = await overpass(ql, { signal });
-  return j.elements || [];
+  const ql = `[out:json][timeout:25];(${st('way["highway"]["lit"]', 25)}${st('way["highway"~"^(footway|path|steps|track|pedestrian|living_street)$"]', 25)}${st('node["highway"="street_lamp"]', 40)}${st('node["amenity"~"^(pharmacy|police|hospital|clinic|restaurant|cafe|bar|pub|fast_food|fuel|bank)$"]', 100)}${st('node["shop"~"^(convenience|supermarket|bakery|mall)$"]', 100)}${st('node["railway"~"^(station|subway_entrance)$"]', 100)}${st('node["public_transport"="stop_position"]', 60)});out geom tags qt;`;
+  let err;
+  for (const u of OVP) {
+    try { const j = await getJSON(u, { signal, timeout: 28000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } }); return j.elements || []; }
+    catch (e) { err = e; if (signal?.aborted) throw e; }
+  }
+  throw err;
 }
 
 /* ---------- pontos de transporte próximos (OpenStreetMap) ---------- */
 export async function stopsAround(lat, lon, radius = 600, { signal } = {}) {
-  const ql = `[out:json][timeout:12];(node["highway"="bus_stop"](around:${radius},${lat},${lon});node["railway"~"^(station|subway_entrance|tram_stop)$"](around:${radius},${lat},${lon}););out tags;`;
-  const j = await overpass(ql, { signal, timeout: 12000 });
-  return (j.elements || []).map(e => ({ name: e.tags?.name || (e.tags?.highway === 'bus_stop' ? 'Ponto de ônibus' : 'Estação'), kind: e.tags?.highway === 'bus_stop' ? 'bus' : (e.tags?.station === 'subway' || e.tags?.subway === 'yes' || e.tags?.railway === 'subway_entrance' ? 'subway' : 'rail'), lat: e.lat, lon: e.lon, d: hav([lat, lon], [e.lat, e.lon]) })).sort((a, b) => a.d - b.d);
+  const ql = `[out:json][timeout:20];(node["highway"="bus_stop"](around:${radius},${lat},${lon});node["railway"~"^(station|subway_entrance|tram_stop)$"](around:${radius},${lat},${lon}););out tags;`;
+  let err;
+  for (const u of OVP) {
+    try {
+      const j = await getJSON(u, { signal, timeout: 20000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } });
+      return (j.elements || []).map(e => ({ name: e.tags?.name || (e.tags?.highway === 'bus_stop' ? 'Ponto de ônibus' : 'Estação'), kind: e.tags?.highway === 'bus_stop' ? 'bus' : (e.tags?.station === 'subway' || e.tags?.subway === 'yes' || e.tags?.railway === 'subway_entrance' ? 'subway' : 'rail'), lat: e.lat, lon: e.lon, d: hav([lat, lon], [e.lat, e.lon]) })).sort((a, b) => a.d - b.d);
+    } catch (e) { err = e; if (signal?.aborted) throw e; }
+  }
+  throw err;
 }
