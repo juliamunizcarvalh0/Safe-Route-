@@ -284,3 +284,6 @@ a.btn,a.row{text-decoration:none;color:inherit}a.btn.primary,a.btn.danger{color:
 .why-m{font-weight:700;color:var(--risk);font-variant-numeric:tabular-nums;font-size:1rem}
 .why-det{border-top:1px solid var(--line);padding-top:.875rem}.why-det summary{cursor:pointer;font-weight:700;color:var(--rose-text);min-height:2.75rem;display:flex;align-items:center}
 .why-det p{margin:0}
+.why-det summary{list-style:none;border-radius:.75rem}.why-det summary::-webkit-details-marker{display:none}
+.why-det summary::after{content:"+";margin-left:auto;font-size:1.25rem;line-height:1}.why-det[open] summary::after{content:"−"}
+.why-det summary:focus{outline:none}.why-det summary:focus-visible{outline:2px solid var(--rose);outline-offset:-2px}
