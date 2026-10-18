@@ -77,7 +77,7 @@ register('about', () => ({
   html: `<div class="scroll" style="gap:1rem">${header('Sobre o SafeRoute')}
     <div class="card"><div class="head">Protótipo funcional · IHC · UFABC</div><div class="small">Versão 1.0. Projeto acadêmico de navegação urbana segura para mulheres. <b>Não substitui serviços de emergência</b> — em perigo, ligue 190.</div></div>
     <div class="card"><div class="head">Sobre os dados</div><div class="small"><b>Mapa, busca e rotas</b>: OpenStreetMap (ODbL), Nominatim e OSRM. <b>Iluminação e comércio</b>: OpenStreetMap via Overpass. <b>Ocorrências e relatos de exemplo</b>: dados ilustrativos criados para a demonstração — não são estatísticas oficiais. A cobertura do score de risco é apenas da Grande São Paulo.</div></div>
-    <div class="card"><div class="head">Limites desta versão</div><div class="small">Sem servidor: avisos a contatos e SOS são abertos no WhatsApp/telefone e dependem do seu toque. Não há transmissão de áudio nem compartilhamento ao vivo. A caminhada usa simulação por padrão; o GPS real é opcional.</div></div>
+    <div class="card"><div class="head">Limites desta versão</div><div class="small">Sem servidor: avisos a contatos e SOS são abertos no WhatsApp/telefone e dependem do seu toque. Não há transmissão de áudio nem localização ao vivo: o aviso ativo é só um lembrete local, encerrado ao chegar ou em até 3 h. Relatos expiram em 30 dias. A caminhada usa simulação por padrão; o GPS real é opcional.</div></div>
     <div class="small center">Mapas © OpenStreetMap contributors · Leaflet · Fontes: DM Sans e Fraunces (OFL)</div></div>`,
   mount() {}
 }));

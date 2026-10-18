@@ -8,6 +8,7 @@ import { analyze, label, PART_LABEL, WEIGHTS } from '../score.js';
 import { allReports, CATS, HOTSPOTS, LANDMARKS } from '../data.js';
 import { $, $$, T, esc, toast, debounce, modal, waLink, osmLink, vibrate, resizable } from '../ui.js';
 import { openReport } from './community.js';
+import { contestModal } from './nav.js';
 
 let gpsTried = false;
 function greeting() { const h = new Date().getHours(); return h < 5 ? 'Boa madrugada' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
@@ -26,6 +27,7 @@ function drawYou() { mapx.pin(here.lat, here.lon, {}); } // substituído abaixo
 const placeIcon = k => k === 'home' ? 'home' : k === 'work' ? 'briefcase' : 'star';
 
 register('home', () => {
+  if (store.get().share && Date.now() - store.get().share.ts > 3 * 3600e3) store.update(x => x.share = null); // compartilhamento expira em 3 h
   const st = store.get(), s = st.settings;
   const places = st.places; const byKind = k => places.find(p => p.kind === k);
   const slot = (k, lbl) => { const p = byKind(k); return `<button class="chip" data-slot="${k}">${ic(placeIcon(k), 18)}${p ? esc(lbl) : esc(lbl) + ' · definir'}</button>`; };
@@ -33,7 +35,7 @@ register('home', () => {
   const recents = st.recents.slice(0, 2).map((p, i) => `<button class="sugg" data-recent="${i}"><div class="tile alt">${ic('clock', 20)}</div><div class="grow"><div class="strong">${esc(p.name)}</div><div class="small">${esc(p.sub || '')}</div></div>${ic('right', 18)}</button>`).join('');
   return {
     opts: { map: true, tabs: true },
-    html: `<div class="topbar"><button class="search hit" data-search aria-label="Buscar destino">${ic('search', 22)}<span>${T('Para onde vamos?', 'Para onde você vai?')}</span></button></div>
+    html: `<div class="topbar"><button class="search hit" data-search aria-label="Buscar destino">${ic('search', 22)}<span>${T('Para onde vamos?', 'Para onde você vai?')}</span></button>${st.share ? `<div class="banner safe hit" style="margin-top:.5rem">${ic('share', 18)}<span class="grow">Aviso ativo${st.share.dest ? ' para ' + esc(st.share.dest) : ''}. Expira em até 3 h.</span><button class="chip" data-endshare>Encerrar</button></div>` : ''}</div>
       <div class="hit" style="position:absolute;right:1rem;top:7.5rem;display:flex;flex-direction:column;gap:.625rem;align-items:flex-end">
         <button class="fab round" data-locate aria-label="Minha localização">${ic('locate', 22)}</button>
         <button class="fab round" data-layer="reports" aria-pressed="${s.layers.reports}" aria-label="Mostrar relatos no mapa" style="${s.layers.reports ? 'background:var(--plum);color:#fff' : ''}">${ic('flag', 22)}</button>
@@ -54,6 +56,7 @@ register('home', () => {
       let youM; drawAll();
       mapx.view(here.lat, here.lon, 15, 110, false);
       resizable($('.sheet', el));
+      const es = $('[data-endshare]', el); if (es) es.onclick = () => { store.update(x => x.share = null); r.reset('home', {}, 'fade'); toast('Aviso encerrado', 'check'); };
       $('[data-search]', el).onclick = () => r.go('search', { mode: 'dest' }, { anim: 'up' });
       $('[data-sos]', el).onclick = () => r.go('sos', {}, { anim: 'up' });
       $('[data-locate]', el).onclick = async () => {
@@ -279,6 +282,6 @@ export function scoreModal(rt, night) {
   modal(`<div class="hrow" style="gap:1rem"><div class="scorering" style="--p:${a.score ?? 0};--c:${col}"><span><span class="h-n">${a.score ?? '—'}</span></span></div><div class="grow"><div class="over">${night ? 'Considerando a noite' : 'Considerando o dia'}</div><h2 class="h-s">Segurança ${l.t.toLowerCase()}</h2><span class="badge ${l.tone}">${rt.label}</span></div></div>
     <div class="stack">${rows}</div>
     ${a.refuges.length ? `<div><div class="strong" style="margin-bottom:.4rem">Pontos de apoio no caminho</div><div class="chips">${[...new Set(a.refuges.map(x => x.name))].slice(0, 6).map(n => `<span class="badge safe">${ic('cross', 12)} ${esc(n)}</span>`).join('')}</div></div>` : ''}
-    <details class="why-det"><summary>Como calculamos</summary><div class="small stack" style="gap:.5rem;margin-top:.5rem"><p>Iluminação, comércio aberto e tipo de via vêm do OpenStreetMap. As <b>ocorrências são dados ilustrativos</b>, não estatísticas oficiais. Relatos da comunidade também entram.</p>${a.lengthPenalty ? `<p>Caminho longo: −${a.lengthPenalty} ponto(s), porque você fica mais tempo exposta.</p>` : ''}<p>O score apoia sua decisão; não é uma garantia.</p></div></details>
-    <button class="btn dark" data-dismiss>Entendi</button>`);
+    <details class="why-det"><summary>Como calculamos</summary><div class="small stack" style="gap:.5rem;margin-top:.5rem"><p>Iluminação, comércio aberto e tipo de via vêm do OpenStreetMap. As <b>ocorrências são dados ilustrativos</b>, não estatísticas oficiais. Relatos da comunidade também entram, mas perdem peso com o tempo e saem do cálculo após 30 dias.</p>${a.lengthPenalty ? `<p>Caminho longo: −${a.lengthPenalty} ponto(s), porque você fica mais tempo exposta.</p>` : ''}<p>O score apoia sua decisão; não é uma garantia.</p></div></details>
+    <button class="btn soft" data-contest>Discordo desta nota</button><button class="btn dark" data-dismiss>Entendi</button>`, { onMount: m => { m.querySelector('[data-contest]').onclick = () => contestModal(rt, night); } });
 }

@@ -30,9 +30,27 @@ function snap(coords, cum, lat, lon) {
   return best;
 }
 export const alertText = (dest, extra = '') => `${extra}Estou indo a pé para ${dest?.name || 'meu destino'}. Chego por volta das ${clock(0)}. Local: ${osmLink(here.lat, here.lon)} — SafeRoute`;
-export function shareModal(text, title = 'Avisar alguém de confiança') {
+const REASONS = ['A rua é bem iluminada', 'Passo aqui e me sinto segura', 'A rua é perigosa e a nota está alta', 'Há obra ou calçada bloqueada', 'Outro motivo'];
+export function contestModal(rt, night) {
+  let pick = null;
+  modal(`<h2 class="h-s">Discordo desta nota</h2><p class="small">Sua opinião fica só neste aparelho e ajuda a equipe a revisar o cálculo. A nota não muda sozinha.</p>
+    <div class="chips" role="radiogroup" aria-label="Motivo">${REASONS.map((t, i) => `<button class="chip" role="radio" aria-checked="false" data-r="${i}">${esc(t)}</button>`).join('')}</div>
+    <label class="small" for="c-t">Quer explicar? (opcional)</label><textarea id="c-t" class="input" rows="3" maxlength="300" style="width:100%"></textarea>
+    <button class="btn primary" id="c-ok" disabled>Enviar contestação</button><button class="btn ghost" data-dismiss>Cancelar</button>`, {
+    onMount(m, close) {
+      const ok = m.querySelector('#c-ok');
+      m.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { pick = REASONS[+b.dataset.r]; m.querySelectorAll('[data-r]').forEach(x => x.setAttribute('aria-checked', x === b)); ok.disabled = false; });
+      ok.onclick = () => {
+        store.update(s => s.contests.unshift({ id: store.uid(), ts: Date.now(), route: rt.label || null, score: rt.a?.score ?? null, night: !!night, reason: pick, text: m.querySelector('#c-t').value.trim().slice(0, 300) }));
+        close(); toast('Contestação registrada neste aparelho', 'check');
+      };
+    }
+  });
+}
+export const endShare = () => { if (store.get().share) store.update(s => s.share = null); };
+export function shareModal(text, title = 'Avisar alguém de confiança', note = '') {
   const g = store.get().guardians;
-  modal(`<h2 class="h-s">${esc(title)}</h2><p class="small">O SafeRoute não tem servidor: ele abre o WhatsApp com a mensagem pronta e você toca em enviar.</p>
+  modal(`<h2 class="h-s">${esc(title)}</h2><p class="small">O SafeRoute não tem servidor: ele abre o WhatsApp com a mensagem pronta e você toca em enviar.</p>${note ? `<p class="small">${esc(note)}</p>` : ''}
     ${g.map(x => `<a class="btn primary" target="_blank" rel="noopener" href="${waLink(text, x.phone)}">${ic('send', 18)} ${esc(x.name)}</a>`).join('')}
     <a class="btn ${g.length ? 'soft' : 'primary'}" target="_blank" rel="noopener" href="${waLink(text)}">${ic('share', 18)} Escolher contato no WhatsApp</a>
     ${g.length ? '' : '<p class="small">Dica: cadastre pessoas de confiança em Rede › Contatos para enviar com um toque.</p>'}
@@ -98,7 +116,7 @@ register('nav', (p) => {
         if (!announced.has(j) && (dd <= 60 || j === 0) && !(j === 0 && announced.size)) { announced.add(j); const m = Math.round(dd / 10) * 10; speak(j === 0 ? info.text : (dd < 20 ? info.text : `Em ${m} metros, ${info.text}`)); if (j > 0) vibrate([180]); announce(info.text); }
         if (rem < 18 && !ended) arrive();
       };
-      const arrive = () => { ended = true; vibrate([200, 100, 200]); speak('Você chegou ao destino.'); r.go('arrived', { dest, route: rt, secs: (Date.now() - t0) / 1000 }, { anim: 'fade', replace: true }); };
+      const arrive = () => { ended = true; const hadShare = !!store.get().share; endShare(); vibrate([200, 100, 200]); speak('Você chegou ao destino.'); r.go('arrived', { hadShare, dest, route: rt, secs: (Date.now() - t0) / 1000 }, { anim: 'fade', replace: true }); };
       const tick = () => { if (mode === 'sim' && !ended) { s = Math.min(total, s + 1.4 * mult); update(); } };
       timer = setInterval(tick, 1000); update();
       $$('[data-m]', el).forEach(b => b.onclick = () => { if (b.dataset.m === 'gps') setMode('gps'); else { mult = +b.dataset.m.split(':')[1]; setMode('sim'); } });
@@ -107,11 +125,11 @@ register('nav', (p) => {
       $('#n-follow', el).onclick = () => { follow = true; $('#n-follow', el).style.display = 'none'; update(); };
       const v = $('#n-voice', el); v.onclick = () => { const on = !store.get().settings.voice; store.update(x => x.settings.voice = on); v.setAttribute('aria-pressed', on); v.style.opacity = on ? 1 : .5; if (!on) speechSynthesis?.cancel(); toast(on ? 'Voz ligada' : 'Voz desligada', 'volume'); };
       v.style.opacity = store.get().settings.voice ? 1 : .5;
-      $('#a-share', el).onclick = () => shareModal(alertText(dest));
+      $('#a-share', el).onclick = () => { store.update(s => s.share = { dest: dest?.name || null, ts: Date.now() }); shareModal(alertText(dest), 'Avisar alguém de confiança', 'Compartilhamento encerra quando você chegar ou encerrar a caminhada.'); };
       $('#a-rep', el).onclick = () => r.go('report-new', { fromNav: true, loc: { lat: you.getLatLng().lat, lon: you.getLatLng().lng } }, { anim: 'up' });
       $('#a-hide', el).onclick = () => r.go('calc', {}, { anim: 'fade' });
       $('#a-sos', el).onclick = () => r.go('sos', {}, { anim: 'up' });
-      $('#a-end', el).onclick = async () => { if (await confirmDialog({ title: 'Encerrar caminhada?', body: 'O acompanhamento será finalizado.', ok: 'Encerrar', cancel: 'Continuar' })) r.reset('home', {}, 'down'); };
+      $('#a-end', el).onclick = async () => { if (await confirmDialog({ title: 'Encerrar caminhada?', body: 'O acompanhamento será finalizado.', ok: 'Encerrar', cancel: 'Continuar' })) endShare(), r.reset('home', {}, 'down'); };
       return () => { clearInterval(timer); if (watch != null) navigator.geolocation.clearWatch(watch); map.off('dragstart'); speechSynthesis?.cancel?.(); };
     }
   };
@@ -123,7 +141,7 @@ register('arrived', (p) => ({
     <div class="center stack" style="gap:.5rem"><h1 class="h-m">${T('Você chegou bem!', 'Você chegou!')}</h1><p class="lead">${esc(p.dest.name)}<br>${fmtMin(p.secs > 5 ? p.secs : p.route.dur)} · ${fmtDist(p.route.dist)}</p></div>
     <div class="stack"><div class="strong center">Como foi o caminho?</div><div class="chips" role="radiogroup" aria-label="Como foi o caminho" style="justify-content:center">
       ${[['ok', 'smile', 'Tranquilo'], ['meh', 'meh', 'Mais ou menos'], ['bad', 'frown', 'Não me senti segura']].map(([k, i, t]) => `<button class="chip" role="radio" aria-checked="false" data-fb="${k}">${ic(i, 18)}${t}</button>`).join('')}</div>
-      <p class="small center">Sua resposta fica só no seu aparelho e ajuda a calibrar o app com você.</p></div></div>
+      <p class="small center">Sua resposta fica só no seu aparelho e ajuda a calibrar o app com você.</p>${p.hadShare ? '<div class="banner safe">'+ic('check',18)+'<span>O compartilhamento da caminhada foi encerrado. Toque em "Avisar que cheguei" para fechar o aviso com seus contatos.</span></div>' : ''}</div></div>
     <div class="bar-fixed"><button class="btn soft" id="a-tell">${ic('send', 18)} Avisar que cheguei</button><button class="btn primary" id="a-done">Concluir</button></div>`,
   mount(el, r) {
     let fb = null; $$('[data-fb]', el).forEach(b => b.onclick = () => { fb = b.dataset.fb; $$('[data-fb]', el).forEach(x => x.setAttribute('aria-checked', x === b)); if (fb === 'bad') toast('Sentimos muito. Você pode relatar o que aconteceu em Relatos.', 'heart', 3800); });

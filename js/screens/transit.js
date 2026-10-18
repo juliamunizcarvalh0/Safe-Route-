@@ -9,7 +9,7 @@ import { analyze, label, PART_LABEL } from '../score.js';
 import { allReports } from '../data.js';
 import { $, $$, esc, toast, modal, resizable } from '../ui.js';
 import { odBar, modeSwitch, bindOD } from './home.js';
-import { shareModal } from './nav.js';
+import { shareModal, contestModal } from './nav.js';
 
 const hhmm = ms => isNaN(ms) ? '--:--' : new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 const MODE_ICON = { walk: 'walk', bus: 'bus', subway: 'train', rail: 'train' };
@@ -199,7 +199,7 @@ function whyModal(it, night) {
     ${pens.length ? `<div class="why-sec"><div class="why-h">O que reduz a nota <span class="badge risk" style="padding:.125rem .5rem">−${a.penalty}</span></div>
       <div class="why-list">${pens.map(x => `<div class="why-pen"><div class="grow"><div class="strong">${x[1]}</div>${x[2] ? `<div class="small">${x[2]}</div>` : ''}</div><span class="why-m">−${x[0]}</span></div>`).join('')}</div></div>` : ''}
     <details class="why-det"><summary>Como calculamos</summary><div class="small stack" style="gap:.5rem;margin-top:.5rem"><p>Cada trecho conta pelo tempo que você passa nele. Dentro do veículo o peso é pequeno e a nota é neutra: <b>o interior não é avaliado</b>.</p><p>Horários e linhas: dados abertos da SPTrans (GTFS) via Transitous. Iluminação, comércio e vias: OpenStreetMap. Ocorrências: dados <b>ilustrativos</b>.</p></div></details>
-    <button class="btn dark" data-dismiss>Entendi</button>`);
+    <button class="btn soft" data-contest>Discordo desta nota</button><button class="btn dark" data-dismiss>Entendi</button>`, { onMount: m => { m.querySelector('[data-contest]').onclick = () => contestModal(it, night); } });
 }
 
 /* ---------------- Perfil › Transporte (proxy do tempo real) ---------------- */

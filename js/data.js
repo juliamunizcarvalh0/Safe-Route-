@@ -35,4 +35,6 @@ export const LANDMARKS = [ // sugestões locais usadas se a busca online falhar
   { name: 'Largo da Batata', sub: 'Pinheiros, São Paulo', lat: -23.5662, lon: -46.6967 }
 ];
 import * as store from './store.js';
-export const allReports = () => [...store.get().reports, ...SEED_REPORTS];
+export const REPORT_TTL_DAYS = 30; // relatos perdem peso aos poucos e somem após este prazo, para não estigmatizar um local para sempre
+export const freshness = ts => Math.max(0, 1 - (Date.now() - ts) / (REPORT_TTL_DAYS * 864e5));
+export const allReports = () => [...store.get().reports.filter(r => freshness(r.ts) > 0), ...SEED_REPORTS];

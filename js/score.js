@@ -1,5 +1,5 @@
 import { makeProj, distPtSeg, sampleAlong, hav } from './geo.js';
-import { HOTSPOTS, COVERAGE } from './data.js';
+import { HOTSPOTS, COVERAGE, freshness } from './data.js';
 import * as store from './store.js';
 export const WEIGHTS = {
   night: { light: .35, activity: .25, road: .15, risk: .25 },
@@ -15,7 +15,7 @@ export function riskAt(lat, lon, userReports = []) {
   let r = 0;
   for (const h of HOTSPOTS) { const d = hav([lat, lon], [h.lat, h.lon]); if (d < h.r * 2.5) r += h.w * Math.exp(-(d * d) / (2 * (h.r * .6) ** 2)); }
   for (const u of userReports) { // relatos negativos recentes pesam um pouco
-    if (u.cat === 'safe') continue; const d = hav([lat, lon], [u.lat, u.lon]); if (d < 150) r += .25 * (1 - d / 150);
+    if (u.cat === 'safe') continue; const d = hav([lat, lon], [u.lat, u.lon]); if (d < 150) r += .25 * (1 - d / 150) * (u.seed ? 1 : freshness(u.ts));
   }
   return Math.min(1, r);
 }
@@ -62,7 +62,7 @@ export function analyze(route, osm, reports, night) {
     const n = P.length;
     res.parts.light = lightSum / n; res.parts.activity = actSum / n; res.parts.road = roadSum / n; res.litPct = litN / n;
     // relatos positivos próximos aumentam levemente o movimento percebido
-    const pos = reports.filter(r => r.cat === 'safe' && samples.some(s => hav([s.lat, s.lon], [r.lat, r.lon]) < 120)).length;
+    const pos = reports.filter(r => r.cat === 'safe' && samples.some(s => hav([s.lat, s.lon], [r.lat, r.lon]) < 120)).reduce((a, r) => a + (r.seed ? 1 : freshness(r.ts)), 0);
     res.parts.activity = Math.min(1, res.parts.activity + pos * .05);
   }
   let tw = 0, ts = 0;
