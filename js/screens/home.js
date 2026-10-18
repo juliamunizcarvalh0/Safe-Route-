@@ -215,7 +215,10 @@ register('routes', (p) => {
         });
       };
       const night = () => store.isNight();
-      const score = () => { const rep = allReports(); list.forEach(rt => { rt.a = analyze(rt, osm, rep, night()); }); };
+      const score = () => { const rep = allReports(); list.forEach(rt => { rt.a = analyze(rt, osm, rep, night());
+        // caminhar mais = mais tempo exposta: cada 100 m além de 400 m desconta (mais à noite)
+        const extra = Math.min(12, Math.max(0, (rt.dist - 400) / 100) * (night() ? 1 : .5)), extraR = Math.round(extra);
+        rt.a.lengthPenalty = extraR; if (rt.a.score != null) rt.a.score = Math.max(0, rt.a.score - extraR); }); };
       const assign = () => {
         const ORDER = ['Mais segura', 'Equilibrada', 'Mais rápida'];
         if (list.length === 1) { list[0].label = 'Mais segura'; return; }
@@ -276,6 +279,6 @@ export function scoreModal(rt, night) {
   modal(`<div class="hrow" style="gap:1rem"><div class="scorering" style="--p:${a.score ?? 0};--c:${col}"><span><span class="h-n">${a.score ?? '—'}</span></span></div><div class="grow"><div class="over">${night ? 'Considerando a noite' : 'Considerando o dia'}</div><h2 class="h-s">Segurança ${l.t.toLowerCase()}</h2><span class="badge ${l.tone}">${rt.label}</span></div></div>
     <div class="stack">${rows}</div>
     ${a.refuges.length ? `<div><div class="strong" style="margin-bottom:.4rem">Pontos de apoio no caminho</div><div class="chips">${[...new Set(a.refuges.map(x => x.name))].slice(0, 6).map(n => `<span class="badge safe">${ic('cross', 12)} ${esc(n)}</span>`).join('')}</div></div>` : ''}
-    <div class="card alt" style="box-shadow:none"><div class="strong">Como calculamos</div><div class="small">Iluminação, comércio aberto e tipo de via vêm do OpenStreetMap (mapa colaborativo). As <b>ocorrências são dados ilustrativos</b> desta demonstração — não são estatísticas oficiais. Relatos da comunidade também entram. O score é um apoio à sua decisão, não uma garantia.</div></div>
+    <div class="card alt" style="box-shadow:none"><div class="strong">Como calculamos</div><div class="small">Iluminação, comércio aberto e tipo de via vêm do OpenStreetMap (mapa colaborativo). As <b>ocorrências são dados ilustrativos</b> desta demonstração — não são estatísticas oficiais. Relatos da comunidade também entram. ${a.lengthPenalty ? `Caminhos longos descontam pontos (−${a.lengthPenalty}), porque você fica mais tempo exposta.` : ''} O score é um apoio à sua decisão, não uma garantia.</div></div>
     <button class="btn dark" data-dismiss>Entendi</button>`);
 }

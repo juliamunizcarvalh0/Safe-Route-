@@ -37,14 +37,34 @@ export function scoreItinerary(it, osm, reports, night) {
   const scored = stopList.filter(x => x.a && x.a.score != null);
   const stopAvg = scored.length ? Math.round(scored.reduce((a, x) => a + x.a.score, 0) / scored.length) : null;
   const weakest = scored.length ? scored.reduce((m, x) => x.a.score < m.a.score ? x : m) : null;
-  const penalty = it.transfers * (night ? 4 : 2);
-  const parts = [walkScore, stopAvg].filter(v => v != null);
-  const base = parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
+  // Nota por EXPOSIÇÃO: quanto mais tempo exposta (andando, esperando parada), mais pesa; quanto pior o lugar, pior.
+  // Esperar parada pesa mais que andar (você fica parada e visível); dentro do veículo o peso é pequeno e a nota é neutra (interior não é avaliado).
+  const NEUTRO = night ? 72 : 80;
+  let wSum = 0, sSum = 0;
+  const add = (min, sc, w) => { if (min > 0 && sc != null) { wSum += min * w; sSum += min * w * sc; } };
+  it.legs.forEach(l => {
+    if (l.mode === 'walk') add(l.dur / 60, l.a?.score, 1);
+    else {
+      add(l.wait, l.fromA?.score, 2);
+      add(l.dur / 60, NEUTRO, .25);
+    }
+  });
+  const base = wSum ? sSum / wSum : null;
+  const walkM = it.legs.filter(l => l.mode === 'walk').reduce((a, l) => a + l.dist, 0);
+  const waitMin = it.legs.filter(l => l.mode !== 'walk').reduce((a, l) => a + (l.wait || 0), 0);
+  const pen = {
+    transfers: it.transfers * (night ? 5 : 3),
+    walk: Math.min(14, Math.max(0, (walkM - 300) / 100) * (night ? 1.6 : .8)),
+    wait: Math.min(14, Math.max(0, waitMin - 3) * (night ? .9 : .45)),
+    weak: weakest && weakest.a.score < 70 ? Math.round((70 - weakest.a.score) * .3) : 0,
+    night: night ? 3 : 0
+  };
+  Object.keys(pen).forEach(k => pen[k] = Math.round(pen[k]));
+  const penalty = Object.values(pen).reduce((a, b) => a + b, 0);
   const score = base == null ? null : Math.max(0, Math.min(100, Math.round(base - penalty)));
-  // ponto mais frágil: por qual critério?
   let why = '';
   if (weakest) { const ps = Object.entries(weakest.a.parts).filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0]; if (ps) why = PART_LABEL[ps[0]].toLowerCase(); }
-  it.a = { score, walkScore, stopAvg, weakest, why, penalty };
+  it.a = { score, walkScore, stopAvg, weakest, why, penalty, pen, walkM, waitMin };
   return it.a;
 }
 
@@ -164,8 +184,14 @@ function whyModal(it, night) {
   const row = (t, v, d) => `<div class="stack" style="gap:.3rem"><div class="hrow"><span class="grow strong">${t}</span><b>${v == null ? '—' : v}</b></div><div class="bar-t"><i style="width:${v ?? 0}%;background:${v == null ? 'var(--muted)' : v >= 85 ? 'var(--safe)' : v >= 70 ? 'var(--warn)' : 'var(--risk)'}"></i></div><div class="small">${d}</div></div>`;
   modal(`<div class="hrow" style="gap:1rem"><div class="scorering" style="--p:${a.score ?? 0};--c:${col}"><span><span class="h-n">${a.score ?? '—'}</span></span></div><div class="grow"><div class="over">${night ? 'Considerando a noite' : 'Considerando o dia'}</div><h2 class="h-s">Segurança ${l.t.toLowerCase()}</h2></div></div>
     ${row('Caminhadas', a.walkScore, 'Média das calçadas até o ponto e depois do desembarque (iluminação, movimento, tipo de via, ocorrências).')}
-    ${row('Pontos de parada', a.stopAvg, 'Média de cada embarque e desembarque. É onde você espera e fica parada, por isso pesa tanto quanto o caminho.')}
-    <div class="card alt" style="box-shadow:none"><div class="strong">Baldeações</div><div class="small">${it.transfers} baldeaç${it.transfers === 1 ? 'ão' : 'ões'} descontam ${a.penalty} ponto(s) — cada troca é mais uma espera. ${a.weakest ? `Ponto mais frágil: <b>${esc(a.weakest.name)}</b> (${a.weakest.a.score}).` : ''}</div></div>
+    ${row('Pontos de parada', a.stopAvg, 'Média de cada embarque e desembarque. A espera ali pesa o dobro de caminhar, porque você fica parada e visível.')}
+    <div class="card alt" style="box-shadow:none"><div class="strong">O que reduz a nota (${a.penalty} ponto${a.penalty === 1 ? '' : 's'})</div><div class="small">Tudo que deixa você mais tempo exposta pesa: ${[
+      [a.pen.transfers, `${it.transfers} baldeaç${it.transfers === 1 ? 'ão' : 'ões'}`],
+      [a.pen.walk, `${Math.round(a.walkM)} m a pé`],
+      [a.pen.wait, `${a.waitMin} min de espera em pontos`],
+      [a.pen.weak, 'ponto de parada frágil'],
+      [a.pen.night, 'viagem à noite']
+    ].filter(x => x[0] > 0).map(x => `${x[1]} (−${x[0]})`).join(', ') || 'quase nada neste trajeto'}. ${a.weakest ? `Ponto mais frágil: <b>${esc(a.weakest.name)}</b> (${a.weakest.a.score}).` : ''} A espera em ponto conta o dobro de caminhar; dentro do veículo conta pouco e usa uma nota neutra.</div></div>
     <div class="card alt" style="box-shadow:none"><div class="small">Horários e linhas: dados abertos GTFS da SPTrans via Transitous. Segurança dos pontos e calçadas: OpenStreetMap + dados <b>ilustrativos</b> de ocorrências. <b>O interior do ônibus/metrô não é avaliado.</b></div></div>
     <button class="btn dark" data-dismiss>Entendi</button>`);
 }
