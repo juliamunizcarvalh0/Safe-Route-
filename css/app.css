@@ -287,3 +287,5 @@ a.btn,a.row{text-decoration:none;color:inherit}a.btn.primary,a.btn.danger{color:
 .why-det summary{list-style:none;border-radius:.75rem}.why-det summary::-webkit-details-marker{display:none}
 .why-det summary::after{content:"+";margin-left:auto;font-size:1.25rem;line-height:1}.why-det[open] summary::after{content:"−"}
 .why-det summary:focus{outline:none}.why-det summary:focus-visible{outline:2px solid var(--rose);outline-offset:-2px}
+
+.why-calc{display:flex;flex-wrap:wrap;gap:.25rem .75rem;align-items:baseline;padding:.75rem 1rem;border-radius:1rem;background:var(--surface-alt);font-size:.875rem;color:var(--ink-soft)}.why-calc b{color:var(--ink);font-variant-numeric:tabular-nums}.why-eq{margin-left:auto;font-size:1rem}

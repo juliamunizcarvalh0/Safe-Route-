@@ -64,7 +64,7 @@ export function scoreItinerary(it, osm, reports, night) {
   const score = base == null ? null : Math.max(0, Math.min(100, Math.round(base - penalty)));
   let why = '';
   if (weakest) { const ps = Object.entries(weakest.a.parts).filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0]; if (ps) why = PART_LABEL[ps[0]].toLowerCase(); }
-  it.a = { score, walkScore, stopAvg, weakest, why, penalty, pen, walkM, waitMin };
+  it.a = { score, walkScore, stopAvg, weakest, why, penalty, pen, walkM, waitMin, base: base == null ? null : Math.round(base), neutro: NEUTRO, rideMin: Math.round(it.legs.filter(l => l.mode !== 'walk').reduce((a, l) => a + l.dur, 0) / 60) };
   return it.a;
 }
 
@@ -195,7 +195,9 @@ function whyModal(it, night) {
     <div class="why-sec"><div class="why-h">Onde você vai estar</div>
       ${row('Caminhadas', a.walkScore, 'Calçadas até o ponto e depois do desembarque.')}
       ${row('Pontos de parada', a.stopAvg, 'Embarques e desembarques. Esperar ali pesa o dobro.')}
+      ${row('Dentro do veículo', a.neutro, `${a.rideMin} min. Interior não avaliado: nota neutra, peso baixo.`)}
     </div>
+    <div class="why-calc"><span>Média ponderada pelo tempo <b>${a.base ?? '—'}</b></span><span>− descontos <b>${a.penalty}</b></span><span class="why-eq">= <b>${a.score ?? '—'}</b></span></div>
     ${pens.length ? `<div class="why-sec"><div class="why-h">O que reduz a nota <span class="badge risk" style="padding:.125rem .5rem">−${a.penalty}</span></div>
       <div class="why-list">${pens.map(x => `<div class="why-pen"><div class="grow"><div class="strong">${x[1]}</div>${x[2] ? `<div class="small">${x[2]}</div>` : ''}</div><span class="why-m">−${x[0]}</span></div>`).join('')}</div></div>` : ''}
     <details class="why-det"><summary>Como calculamos</summary><div class="small stack" style="gap:.5rem;margin-top:.5rem"><p>Cada trecho conta pelo tempo que você passa nele. Dentro do veículo o peso é pequeno e a nota é neutra: <b>o interior não é avaliado</b>.</p><p>Horários e linhas: dados abertos da SPTrans (GTFS) via Transitous. Iluminação, comércio e vias: OpenStreetMap. Ocorrências: dados <b>ilustrativos</b>.</p></div></details>
