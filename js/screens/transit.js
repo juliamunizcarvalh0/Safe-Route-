@@ -181,18 +181,24 @@ register('transit', (p) => {
 
 function whyModal(it, night) {
   const a = it.a, l = label(a.score), col = l.tone === 'safe' ? 'var(--safe)' : l.tone === 'warn' ? 'var(--warn)' : 'var(--risk)';
-  const row = (t, v, d) => `<div class="stack" style="gap:.3rem"><div class="hrow"><span class="grow strong">${t}</span><b>${v == null ? '—' : v}</b></div><div class="bar-t"><i style="width:${v ?? 0}%;background:${v == null ? 'var(--muted)' : v >= 85 ? 'var(--safe)' : v >= 70 ? 'var(--warn)' : 'var(--risk)'}"></i></div><div class="small">${d}</div></div>`;
-  modal(`<div class="hrow" style="gap:1rem"><div class="scorering" style="--p:${a.score ?? 0};--c:${col}"><span><span class="h-n">${a.score ?? '—'}</span></span></div><div class="grow"><div class="over">${night ? 'Considerando a noite' : 'Considerando o dia'}</div><h2 class="h-s">Segurança ${l.t.toLowerCase()}</h2></div></div>
-    ${row('Caminhadas', a.walkScore, 'Média das calçadas até o ponto e depois do desembarque (iluminação, movimento, tipo de via, ocorrências).')}
-    ${row('Pontos de parada', a.stopAvg, 'Média de cada embarque e desembarque. A espera ali pesa o dobro de caminhar, porque você fica parada e visível.')}
-    <div class="card alt" style="box-shadow:none"><div class="strong">O que reduz a nota (${a.penalty} ponto${a.penalty === 1 ? '' : 's'})</div><div class="small">Tudo que deixa você mais tempo exposta pesa: ${[
-      [a.pen.transfers, `${it.transfers} baldeaç${it.transfers === 1 ? 'ão' : 'ões'}`],
-      [a.pen.walk, `${Math.round(a.walkM)} m a pé`],
-      [a.pen.wait, `${a.waitMin} min de espera em pontos`],
-      [a.pen.weak, 'ponto de parada frágil'],
-      [a.pen.night, 'viagem à noite']
-    ].filter(x => x[0] > 0).map(x => `${x[1]} (−${x[0]})`).join(', ') || 'quase nada neste trajeto'}. ${a.weakest ? `Ponto mais frágil: <b>${esc(a.weakest.name)}</b> (${a.weakest.a.score}).` : ''} A espera em ponto conta o dobro de caminhar; dentro do veículo conta pouco e usa uma nota neutra.</div></div>
-    <div class="card alt" style="box-shadow:none"><div class="small">Horários e linhas: dados abertos GTFS da SPTrans via Transitous. Segurança dos pontos e calçadas: OpenStreetMap + dados <b>ilustrativos</b> de ocorrências. <b>O interior do ônibus/metrô não é avaliado.</b></div></div>
+  const bc = v => v == null ? 'var(--muted)' : v >= 85 ? 'var(--safe)' : v >= 70 ? 'var(--warn)' : 'var(--risk)';
+  const row = (t, v, d) => `<div class="why-row"><div class="hrow"><span class="grow strong">${t}</span><b class="why-n">${v == null ? '—' : v}</b></div><div class="bar-t"><i style="width:${v ?? 0}%;background:${bc(v)}"></i></div><div class="small">${d}</div></div>`;
+  const pens = [
+    [a.pen.transfers, `${it.transfers} baldeaç${it.transfers === 1 ? 'ão' : 'ões'}`, 'cada troca é mais uma espera'],
+    [a.pen.walk, `${Math.round(a.walkM)} m a pé`, 'mais tempo na rua'],
+    [a.pen.wait, `${a.waitMin} min de espera`, 'parada e visível no ponto'],
+    [a.pen.weak, 'Ponto frágil', a.weakest ? esc(a.weakest.name) : ''],
+    [a.pen.night, 'Viagem à noite', 'menos gente e menos luz']
+  ].filter(x => x[0] > 0);
+  const summary = a.weakest && a.weakest.a.score < 70 ? `O ponto mais frágil é <b>${esc(a.weakest.name)}</b> (${a.weakest.a.score}).` : a.penalty >= 10 ? 'A nota cai principalmente pelo tempo que você fica exposta.' : 'Pontos e calçadas com segurança aceitável.';
+  modal(`<div class="hrow" style="gap:1rem"><div class="scorering" style="--p:${a.score ?? 0};--c:${col}"><span><span class="h-n">${a.score ?? '—'}</span></span></div><div class="grow"><div class="over">${night ? 'À noite' : 'De dia'}</div><h2 class="h-s">${l.t}</h2><div class="small" style="margin-top:.25rem">${summary}</div></div></div>
+    <div class="why-sec"><div class="why-h">Onde você vai estar</div>
+      ${row('Caminhadas', a.walkScore, 'Calçadas até o ponto e depois do desembarque.')}
+      ${row('Pontos de parada', a.stopAvg, 'Embarques e desembarques. Esperar ali pesa o dobro.')}
+    </div>
+    ${pens.length ? `<div class="why-sec"><div class="why-h">O que reduz a nota <span class="badge risk" style="padding:.125rem .5rem">−${a.penalty}</span></div>
+      <div class="why-list">${pens.map(x => `<div class="why-pen"><div class="grow"><div class="strong">${x[1]}</div>${x[2] ? `<div class="small">${x[2]}</div>` : ''}</div><span class="why-m">−${x[0]}</span></div>`).join('')}</div></div>` : ''}
+    <details class="why-det"><summary>Como calculamos</summary><div class="small stack" style="gap:.5rem;margin-top:.5rem"><p>Cada trecho conta pelo tempo que você passa nele. Dentro do veículo o peso é pequeno e a nota é neutra: <b>o interior não é avaliado</b>.</p><p>Horários e linhas: dados abertos da SPTrans (GTFS) via Transitous. Iluminação, comércio e vias: OpenStreetMap. Ocorrências: dados <b>ilustrativos</b>.</p></div></details>
     <button class="btn dark" data-dismiss>Entendi</button>`);
 }
 

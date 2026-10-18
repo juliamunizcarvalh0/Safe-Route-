@@ -273,3 +273,14 @@ a.btn,a.row{text-decoration:none;color:inherit}a.btn.primary,a.btn.danger{color:
 .sheet .grab.handle::before{content:"";position:absolute;left:-4rem;right:-4rem;top:-.9rem;bottom:-1rem}
 .sheet .grab.handle:focus-visible{outline:3px solid var(--rose);outline-offset:4px}
 .sheet{will-change:height}
+
+/* Modal "Por que esta nota?" — mais respiro e hierarquia */
+.why-sec{display:flex;flex-direction:column;gap:1rem;padding-top:.25rem}
+.why-h{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.why-row{display:flex;flex-direction:column;gap:.5rem}.why-row .small{line-height:1.45}
+.why-n{font-variant-numeric:tabular-nums;font-size:1.125rem}
+.why-list{display:flex;flex-direction:column;border-radius:1.25rem;background:var(--surface-alt);overflow:hidden}
+.why-pen{display:flex;align-items:center;gap:.75rem;padding:.875rem 1rem}.why-pen+.why-pen{border-top:1px solid var(--line)}
+.why-m{font-weight:700;color:var(--risk);font-variant-numeric:tabular-nums;font-size:1rem}
+.why-det{border-top:1px solid var(--line);padding-top:.875rem}.why-det summary{cursor:pointer;font-weight:700;color:var(--rose-text);min-height:2.75rem;display:flex;align-items:center}
+.why-det p{margin:0}
