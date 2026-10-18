@@ -12,9 +12,27 @@ export function toast(msg, icon = 'info', ms = 2600) {
 }
 export function announce(msg) { const l = $('#live-region'); l.textContent = ''; setTimeout(() => l.textContent = msg, 30); }
 export function vibrate(p) { if (store.get().settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch {} }
+/* Voz feminina: o navegador não informa o gênero das vozes, então escolhemos pelo nome (vozes pt-BR conhecidas). */
+const FEM = /(female|feminin|francisca|maria|luciana|fernanda|vit[oó]ria|camila|isabela|raquel|helena|google portugu[eê]s do brasil|google português)/i;
+const MASC = /(male\b|masculin|daniel|felipe|antonio|antônio|donato|ricardo|thiago|jo[aã]o|luciano)/i;
+let voicePick;
+function pickVoice() {
+  const all = speechSynthesis.getVoices();
+  if (!all.length) return null;
+  if (voicePick && all.includes(voicePick)) return voicePick;
+  const br = all.filter(v => /^pt[-_]BR/i.test(v.lang));
+  const pool = br.length ? br : all.filter(v => /^pt/i.test(v.lang));
+  voicePick = pool.find(v => FEM.test(v.name) && !MASC.test(v.name)) || pool.find(v => !MASC.test(v.name)) || pool[0] || null;
+  return voicePick;
+}
+if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => { voicePick = null; }); } catch {} }
 export function speak(text) {
   if (!store.get().settings.voice || !('speechSynthesis' in window)) return;
-  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = 1; speechSynthesis.speak(u); } catch {}
+  try {
+    speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = 1;
+    const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; if (!FEM.test(v.name)) u.pitch = 1.25; } else u.pitch = 1.25;
+    speechSynthesis.speak(u);
+  } catch {}
 }
 export function relTime(ts) {
   const m = Math.round((Date.now() - ts) / 60000);
