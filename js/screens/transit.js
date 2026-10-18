@@ -114,7 +114,7 @@ register('transit', (p) => {
       };
       const liveInfo = async (it, first) => {
         const box = $('#live', body); if (!box || !first) return;
-        if (!T.proxyUrl()) { box.innerHTML = `<div class="banner alt">${ic('bus', 18)}<span>Quer ver quando o ônibus chega? Ative o tempo real (Olho Vivo) em <b>Perfil › Transporte</b>.</span></div>`; return; }
+        if (!T.proxyUrl()) { box.remove(); return; }
         box.innerHTML = `<div class="banner alt">${ic('loader', 18, 'spin')}<span>Consultando o Olho Vivo…</span></div>`;
         try {
           const a = await T.arrivals(first.from.name, first.from.lat, first.from.lon, first.line, { signal: ctl.signal });
