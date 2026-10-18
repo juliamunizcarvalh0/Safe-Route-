@@ -118,7 +118,7 @@ register('transit', (p) => {
             <div class="chips" style="gap:.25rem;align-items:center">${x.legs.map((l, k) => legChip(l) + (k < x.legs.length - 1 ? `<span class="cap">›</span>` : '')).join('')}</div>
             <div class="small">${hhmm(x.start)} → ${hhmm(x.end)} · <b>${fmtMin(x.dur)}</b> · ${x.transfers === 0 ? 'sem baldeação' : x.transfers + ' baldeaç' + (x.transfers === 1 ? 'ão' : 'ões')} · ${fmtDist(x.walk)} a pé</div></button>`).join('')}</div>
           ${a.weakest && a.weakest.a.score < 70 ? `<div class="banner ${tone(a.weakest.a.score) === 'risk' ? 'risk' : 'warn'}">${ic('alert', 18)}<span><b>Ponto mais frágil:</b> ${esc(a.weakest.name)} (${a.weakest.a.score}) — ponto fraco: ${esc(a.why)}.${a.weakest.wait > 4 ? ` Você esperaria cerca de ${a.weakest.wait} min ali.` : ''}</span></div>` : a.weakest ? `<div class="banner safe">${ic('shield', 18)}<span>Todos os pontos de parada desta opção têm segurança aceitável.</span></div>` : ''}
-          ${osmFail ? `<div class="banner warn">${ic('info', 18)}<span>Dados de iluminação e comércio indisponíveis agora; o score é <b>parcial</b>.</span></div>` : ''}
+          ${osmFail ? `<div class="banner warn">${ic('info', 18)}<span>Dados de iluminação e comércio indisponíveis agora, então <b>não dá para calcular a nota</b>. Tente de novo em instantes.</span></div>` : ''}
           <div id="live"></div>
           <div class="over" style="margin-top:.25rem">Passo a passo</div><div class="stack">${timeline(it)}</div>
           <div class="banner alt">${ic('info', 18)}<span>O score avalia calçadas e pontos de parada. <b>Não avalia o interior do veículo.</b></span></div>
