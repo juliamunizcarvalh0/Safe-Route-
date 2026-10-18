@@ -4,7 +4,7 @@ const defaults = () => ({
   v: 1,
   onboarded: false,
   consent: { location: false, reports: false, at: null },
-  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, time: 'auto', layers: { reports: true, hotspots: false } },
+  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, time: 'auto', proxyUrl: '', layers: { reports: true, hotspots: false } },
   guardians: [], places: [], recents: [], reports: [], votes: {}, trips: [], survey: null
 });
 const mem = {};

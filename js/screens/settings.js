@@ -6,7 +6,7 @@ import { a11yControls, bindA11y } from './onboarding.js';
 
 register('me', () => {
   const st = store.get();
-  const items = [['access', 'Acessibilidade', 'Letra, contraste, voz, movimento', 'a11y', ''], ['lock', 'Privacidade e dados', 'Permissões, exportar e apagar', 'privacy', ''], ['users', 'Participação', 'Ajude a melhorar o SafeRoute', 'participate', ''], ['eyeoff', 'Modo discreto', 'Calculadora. Sair: digite 1234 e toque em =, ou segure =', 'calc', ''], ['info', 'Sobre o SafeRoute', 'Versão, fontes e créditos', 'about', '']];
+  const items = [['access', 'Acessibilidade', 'Letra, contraste, voz, movimento', 'a11y', ''], ['lock', 'Privacidade e dados', 'Permissões, exportar e apagar', 'privacy', ''], ['bus', 'Transporte', 'Ônibus, metrô e tempo real (Olho Vivo)', 'transit-settings', ''], ['users', 'Participação', 'Ajude a melhorar o SafeRoute', 'participate', ''], ['eyeoff', 'Modo discreto', 'Calculadora. Sair: digite 1234 e toque em =, ou segure =', 'calc', ''], ['info', 'Sobre o SafeRoute', 'Versão, fontes e créditos', 'about', '']];
   return {
     opts: { tabs: true },
     html: `<div class="scroll tabs" style="gap:1rem">${header('Perfil', { back: false })}

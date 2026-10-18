@@ -1,0 +1,7 @@
+name = "saferoute-sptrans-proxy"
+main = "sptrans-proxy.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# Endereço(s) do seu site, separados por vírgula. Ex.: https://SEU-USUARIO.github.io
+ALLOWED_ORIGIN = "https://juliamunizcarvalho0-afk.github.io"

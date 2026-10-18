@@ -159,13 +159,9 @@ register('pick', (p) => ({
 /* ---------------- rotas ---------------- */
 const COLORS = { 'Mais segura': '#0F8A62', 'Equilibrada': '#3B1766', 'Mais rápida': '#D6336C' };
 const bg = c => c; 
-register('routes', (p) => {
-  const dest = p.dest;
-  if (!p.origin || p.origin.isHere) p.origin = { name: 'Minha localização', sub: here.source === 'gps' ? 'GPS' : 'Local de demonstração', lat: here.lat, lon: here.lon, isHere: true };
-  const org = p.origin;
-  return {
-    opts: { map: true },
-    html: `<div class="topbar"><button class="iconbtn hit" data-back aria-label="Voltar">${ic('back', 22)}</button>
+export function odBar(p) {
+  const org = p.origin, dest = p.dest;
+  return `<div class="topbar"><button class="iconbtn hit" data-back aria-label="Voltar">${ic('back', 22)}</button>
       <div class="card hit grow" style="padding:.375rem .5rem .375rem .75rem;box-shadow:var(--shadow-lg);gap:0;flex-direction:row;align-items:center">
         <div class="grow" style="min-width:0">
           <button class="hrow" data-edit="origin" style="width:100%;min-height:var(--tap)" aria-label="Alterar ponto de partida: ${esc(org.name)}"><span class="dot" style="--rc:var(--safe);width:.75rem;height:.75rem"></span><span class="grow" style="min-width:0"><span class="cap" style="display:block">De</span><span class="strong" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(org.name)}</span></span></button>
@@ -173,7 +169,26 @@ register('routes', (p) => {
           <button class="hrow" data-edit="dest" style="width:100%;min-height:var(--tap)" aria-label="Alterar destino: ${esc(dest.name)}">${ic('pin', 14)}<span class="grow" style="min-width:0"><span class="cap" style="display:block">Para</span><span class="strong" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(dest.name)}</span></span></button>
         </div>
         <button class="iconbtn" data-swap aria-label="Inverter origem e destino" style="box-shadow:none;background:var(--rose-soft);color:var(--rose-text);margin-left:.25rem">${ic('uturn', 20)}</button>
-      </div></div>
+      </div></div>`;
+}
+export function modeSwitch(cur) {
+  return `<div class="chips" role="radiogroup" aria-label="Modo de deslocamento"><button class="chip" role="radio" aria-checked="${cur === 'walk'}" data-mode="walk">${ic('walk', 16)} A pé</button><button class="chip" role="radio" aria-checked="${cur === 'transit'}" data-mode="transit">${ic('bus', 16)} Transporte público</button></div>`;
+}
+export function bindOD(el, r, p) {
+  $$('[data-edit]', el).forEach(b => b.onclick = () => {
+    const which = b.dataset.edit;
+    r.go('search', { mode: 'pick', allowHere: which === 'origin', title: which === 'origin' ? 'Ponto de partida' : 'Destino', onChoose: it => { p[which === 'origin' ? 'origin' : 'dest'] = it; if (which === 'dest') store.update(s => { s.recents = [it, ...s.recents.filter(x => x.name !== it.name)].slice(0, 6); }); r.back(); } }, { anim: 'up' });
+  });
+  const sw = $('[data-swap]', el); if (sw) sw.onclick = () => { const t = p.origin; p.origin = p.dest; p.dest = t; r.refresh(); };
+  $$('[data-mode]', el).forEach(b => b.onclick = () => { const m = b.dataset.mode; if (el.dataset.screen === (m === 'walk' ? 'routes' : 'transit')) return; r.go(m === 'walk' ? 'routes' : 'transit', { origin: p.origin, dest: p.dest }, { anim: 'fade', replace: true }); });
+}
+register('routes', (p) => {
+  const dest = p.dest;
+  if (!p.origin || p.origin.isHere) p.origin = { name: 'Minha localização', sub: here.source === 'gps' ? 'GPS' : 'Local de demonstração', lat: here.lat, lon: here.lon, isHere: true };
+  const org = p.origin;
+  return {
+    opts: { map: true },
+    html: `${odBar(p)}
       <div class="sheet" id="sheet" style="max-height:60%"><div class="grab"></div><div id="body" class="stack"></div></div>`,
     mount(el, r) {
       mapx.clear(); const map = mapx.get(), L = mapx.L(), grp = mapx.group();
@@ -181,18 +196,14 @@ register('routes', (p) => {
       let list = [], sel = 0, lines = [], osm = null, osmFail = false, estimated = false;
       const o = { lat: org.lat, lon: org.lon };
       const D = hav([o.lat, o.lon], [dest.lat, dest.lon]);
-      $$('[data-edit]', el).forEach(b => b.onclick = () => {
-        const which = b.dataset.edit;
-        r.go('search', { mode: 'pick', allowHere: which === 'origin', title: which === 'origin' ? 'Ponto de partida' : 'Destino', onChoose: it => { p[which === 'origin' ? 'origin' : 'dest'] = it; if (which === 'dest') store.update(s => { s.recents = [it, ...s.recents.filter(x => x.name !== it.name)].slice(0, 6); }); r.back(); } }, { anim: 'up' });
-      });
-      $('[data-swap]', el).onclick = () => { const t = p.origin; p.origin = p.dest; p.dest = t; r.refresh(); };
+      bindOD(el, r, p);
       if (org.isHere) mapx.L().marker([o.lat, o.lon], { icon: mapx.youIcon(), keyboard: false, interactive: false }).addTo(grp);
       else mapx.pin(o.lat, o.lon, { color: '#0F8A62', svg: ic('walk', 18), size: 36 });
       mapx.pin(dest.lat, dest.lon, { color: '#3B1766', svg: ic('pin', 18), size: 36 });
       resizable($('#sheet', el), { onChange: () => fitAll(list[sel]?.coords) });
       const sheetH = () => $('#sheet', el).offsetHeight + 10;
       const fitAll = (coords) => { try { const b = bboxOf(coords || [[o.lon, o.lat], [dest.lon, dest.lat]], 0.0004); mapx.fit([[b[0], b[1]], [b[2], b[3]]], { top: 175, bottom: Math.min(sheetH(), 520) + 24, maxZoom: 17 }); } catch {} };
-      const loading = (msg) => { body.innerHTML = `<div class="hrow">${ic('loader', 22, 'spin')}<div class="grow"><div class="head">${msg}</div><div class="small">Buscando caminhos a pé e dados da região…</div></div></div><div class="skeleton" style="height:5.5rem"></div><div class="skeleton" style="height:5.5rem"></div>`; fitAll(); };
+      const loading = (msg) => { body.innerHTML = `${modeSwitch('walk')}<div class="hrow">${ic('loader', 22, 'spin')}<div class="grow"><div class="head">${msg}</div><div class="small">Buscando caminhos a pé e dados da região…</div></div></div><div class="skeleton" style="height:5.5rem"></div><div class="skeleton" style="height:5.5rem"></div>`; fitAll(); bindOD(el, r, p); };
       const draw = () => {
         lines.forEach(l => grp.removeLayer(l)); lines = [];
         list.forEach((rt, i) => {
@@ -218,7 +229,7 @@ register('routes', (p) => {
       const render = () => {
         const cur = list[sel]; const a = cur.a;
         const seg = ['auto', 'day', 'night'].map(k => `<button class="chip" role="radio" aria-checked="${store.get().settings.time === k}" data-time="${k}">${k === 'auto' ? 'Agora' : k === 'day' ? ic('sun', 16) + 'Dia' : ic('moon', 16) + 'Noite'}</button>`).join('');
-        body.innerHTML = `<div class="hrow"><div class="grow"><div class="over">${list.length} ${list.length > 1 ? 'opções' : 'opção'} a pé</div><h2 class="h-s">${esc(dest.name)}</h2></div></div>
+        body.innerHTML = `${modeSwitch('walk')}<div class="hrow"><div class="grow"><div class="over">${list.length} ${list.length > 1 ? 'opções' : 'opção'} a pé</div><h2 class="h-s">${esc(dest.name)}</h2></div></div>
           ${estimated ? `<div class="banner risk">${ic('alert', 18)}<span>Não consegui calcular a rota pelas ruas. Mostrando uma <b>estimativa em linha reta</b>; não use para navegar.</span></div>` : ''}
           ${D > 25000 ? `<div class="banner warn">${ic('alert', 18)}<span>Distância muito grande para ir a pé.</span></div>` : ''}
           <div class="stack" role="group" aria-label="Opções de rota">${list.map((rt, i) => {
@@ -230,6 +241,7 @@ register('routes', (p) => {
           <div class="chips" role="radiogroup" aria-label="Horário considerado"><span class="small" style="align-self:center">Horário:</span>${seg}</div>
           <button class="btn primary" data-start>${ic('nav', 20)} Iniciar caminhada</button>
           <div class="hrow"><button class="btn soft" data-why>${ic('info', 18)} Por que esse score?</button><button class="iconbtn" data-share aria-label="Compartilhar rota" style="background:var(--rose-soft);color:var(--rose-text);box-shadow:none">${ic('share', 20)}</button></div>`;
+        bindOD(el, r, p);
         $$('[data-r]', body).forEach(b => b.onclick = () => { sel = +b.dataset.r; draw(); render(); vibrate(8); });
         $$('[data-time]', body).forEach(b => b.onclick = () => { store.update(s => s.settings.time = b.dataset.time); score(); assign(); sel = 0; draw(); render(); });
         $('[data-start]', body).onclick = () => r.go('nav', { route: cur, dest, custom: !org.isHere }, { anim: 'up' });

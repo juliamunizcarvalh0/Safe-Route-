@@ -11,6 +11,11 @@ Sem build, sem dependências para instalar: HTML + CSS + JavaScript (módulos ES
 - GPS real (com sua permissão), voz (Web Speech), vibração, ligação (190/180/192/100) e WhatsApp.
 - Preferências, contatos, relatos e histórico salvos só no aparelho; exportar JSON e apagar tudo (LGPD).
 
+## Transporte público (ônibus, metrô e trem)
+Em **Rotas › Transporte público** o app monta viagens com dados abertos (GTFS da SPTrans via Transitous) e dá uma nota de segurança para cada **calçada** e cada **ponto de embarque/desembarque**, destacando o ponto mais frágil. O interior do veículo não é avaliado.
+O **tempo real dos ônibus** (Olho Vivo) exige o proxy da pasta [`worker/`](worker/README.md): o token da SPTrans fica só lá, nunca no site.
+Cobertura: Grande São Paulo. Metrô e trem dependem de estarem no feed GTFS usado pelo Transitous; se faltarem, o app avisa e mostra os pontos próximos.
+
 ## O que é simulado / limites (importante para o relatório)
 - **Ocorrências e relatos de exemplo são dados ilustrativos**, não estatísticas oficiais (SSP-SP etc.). Cobrem só a Grande São Paulo; fora dela o score ignora esse critério e avisa.
 - **Não há servidor**: avisos e SOS abrem o WhatsApp/telefone com a mensagem pronta e dependem do toque da usuária. Não há áudio/localização ao vivo para terceiros.

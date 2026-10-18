@@ -5,6 +5,7 @@ import './screens/home.js';
 import './screens/nav.js';
 import './screens/community.js';
 import './screens/settings.js';
+import './screens/transit.js';
 import { $ } from './ui.js';
 
 store.applySettings();

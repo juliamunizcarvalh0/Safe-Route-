@@ -1,6 +1,6 @@
 // Acesso a serviços abertos: busca (Nominatim/Photon), rotas a pé (OSRM) e dados do OpenStreetMap (Overpass).
 import { here, hav, bearing, makeProj, distPtSeg } from './geo.js';
-async function getJSON(url, { signal, timeout = 12000, init } = {}) {
+export async function getJSON(url, { signal, timeout = 12000, init } = {}) {
   const c = new AbortController(); const t = setTimeout(() => c.abort(), timeout);
   signal && signal.addEventListener('abort', () => c.abort());
   try { const r = await fetch(url, { ...init, signal: c.signal }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
@@ -102,6 +102,19 @@ export async function osmAround(routeCoords, { signal } = {}) { // routeCoords: 
   for (const u of OVP) {
     try { const j = await getJSON(u, { signal, timeout: 28000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } }); return j.elements || []; }
     catch (e) { err = e; if (signal?.aborted) throw e; }
+  }
+  throw err;
+}
+
+/* ---------- pontos de transporte próximos (OpenStreetMap) ---------- */
+export async function stopsAround(lat, lon, radius = 600, { signal } = {}) {
+  const ql = `[out:json][timeout:20];(node["highway"="bus_stop"](around:${radius},${lat},${lon});node["railway"~"^(station|subway_entrance|tram_stop)$"](around:${radius},${lat},${lon}););out tags;`;
+  let err;
+  for (const u of OVP) {
+    try {
+      const j = await getJSON(u, { signal, timeout: 20000, init: { method: 'POST', body: 'data=' + encodeURIComponent(ql), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } } });
+      return (j.elements || []).map(e => ({ name: e.tags?.name || (e.tags?.highway === 'bus_stop' ? 'Ponto de ônibus' : 'Estação'), kind: e.tags?.highway === 'bus_stop' ? 'bus' : (e.tags?.station === 'subway' || e.tags?.subway === 'yes' || e.tags?.railway === 'subway_entrance' ? 'subway' : 'rail'), lat: e.lat, lon: e.lon, d: hav([lat, lon], [e.lat, e.lon]) })).sort((a, b) => a.d - b.d);
+    } catch (e) { err = e; if (signal?.aborted) throw e; }
   }
   throw err;
 }
