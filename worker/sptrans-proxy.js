@@ -4,10 +4,12 @@ const BASE = 'https://api.olhovivo.sptrans.com.br/v2.1';
 let cookie = null, cookieAt = 0;
 
 async function login(env) {
-  const r = await fetch(`${BASE}/Login/Autenticar?token=${encodeURIComponent(env.SPTRANS_TOKEN)}`, { method: 'POST' });
-  const ok = (await r.text()).trim() === 'true';
+  const tk = String(env.SPTRANS_TOKEN).trim();
+  const r = await fetch(`${BASE}/Login/Autenticar?token=${encodeURIComponent(tk)}`, { method: 'POST' });
+  const body = (await r.text()).trim();
   const sc = r.headers.get('set-cookie');
-  if (!ok || !sc) throw new Error('login_falhou');
+  // Diagnóstico sem expor o token: só tamanho do token, status e resposta da SPTrans.
+  if (body !== 'true' || !sc) throw new Error(`login_falhou (http ${r.status}, resposta "${body.slice(0, 40)}", cookie ${sc ? 'sim' : 'nao'}, token com ${tk.length} caracteres)`);
   cookie = sc.split(';')[0]; cookieAt = Date.now();
 }
 async function olho(env, path) {
