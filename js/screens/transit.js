@@ -138,12 +138,11 @@ register('transit', (p) => {
           const put = (icon, html, style = '') => { box.innerHTML = `<span style="display:inline-flex;align-items:flex-start;gap:.3rem;${style}">${ic(icon, 14, icon === 'loader' ? 'spin' : '')}<span>${html}</span></span>`; };
           put('loader', 'Consultando o Olho Vivo…');
           try {
-            const a = await T.arrivals(leg.from.name, leg.from.lat, leg.from.lon, leg.line, { signal: ctl.signal });
+            const a = await T.arrivals(leg.from.name, leg.from.lat, leg.from.lon, leg.line, { signal: ctl.signal, headsign: leg.headsign });
             if (!alive || list[sel] !== it) return;
-            const others = a.all?.filter(x => x.t.length).slice(0, 3).map(x => `${esc(x.c)} (${x.t[0]})`).join(', ');
             if (a.notFound) put('info', 'Ao vivo: ponto não encontrado no Olho Vivo.');
             else if (a.line && a.line.t.length) put('bus', `Ao vivo: chega às ${a.line.t.join(', ')}`, 'color:#0B6B4C;font-weight:600');
-            else put('info', `Ao vivo: nenhum ônibus desta linha previsto neste ponto agora.${others ? ' Passam por aqui: ' + others + '.' : ''}`);
+            else put('info', 'Sem previsão ao vivo agora (nenhum ônibus desta linha a caminho). Vale o horário programado.');
           } catch { if (alive) put('info', 'Tempo real indisponível agora.'); }
         });
       };

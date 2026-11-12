@@ -51,14 +51,21 @@ export const DEFAULT_PROXY = 'https://saferoute-sptrans-proxy.juliamuniz0746.wor
 export const proxyUrl = () => ((store.get().settings.proxyUrl || '').trim() || DEFAULT_PROXY).replace(/\/+$/, '');
 const normL = x => String(x || '').toUpperCase().replace(/\s/g, '');
 // 1) pela linha: acha os sentidos da linha, lista os pontos deles (com coordenadas) e usa o mais perto do embarque.
-async function stopByLine(base, line, lat, lon, signal) {
+const toks = x => new Set(String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().split(/[^A-Z0-9]+/).filter(w => w.length >= 3 && !/^(TERM|TERMINAL|METRO|PCA|AV|RUA|SENTIDO|BAIRRO|CENTRO)$/.test(w)));
+const overlap = (a, b) => { const B = toks(b); let n = 0; for (const w of toks(a)) if (B.has(w)) n++; return n; };
+// 1) pela linha: acha os sentidos da linha, lista os pontos deles (com coordenadas) e usa o mais perto do embarque,
+// escolhendo o sentido certo pelo destino (headsign), para não pegar o ponto do outro lado da avenida.
+async function stopByLine(base, line, lat, lon, headsign, signal) {
   const L = normL(line); if (!L) return null;
   let ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L)}`, { signal, timeout: 9000 }).catch(() => []);
   if (!Array.isArray(ls) || !ls.length) ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L.split('-')[0])}`, { signal, timeout: 9000 }).catch(() => []);
   if (!Array.isArray(ls)) return null;
   const exact = ls.filter(x => normL(`${x.lt}-${x.tl}`) === L), cand = (exact.length ? exact : ls.filter(x => normL(x.lt) === L.split('-')[0])).slice(0, 4);
+  // destino de cada sentido: sl 1 = principal → secundário; sl 2 = secundário → principal
+  const dest = c => c.sl === 1 ? c.ts : c.tp, sc = cand.map(c => (headsign ? overlap(headsign, dest(c)) : 0));
+  const top = Math.max(0, ...sc), pick = top > 0 ? cand.filter((c, i) => sc[i] === top) : cand;
   let best = null;
-  for (const c of cand) {
+  for (const c of pick) {
     const st = await getJSON(`${base}/line-stops?line=${c.cl}`, { signal, timeout: 9000 }).catch(() => []);
     for (const s of Array.isArray(st) ? st : []) { const d = hav([lat, lon], [s.py, s.px]); if (d < 200 && (!best || d < best.d)) best = { ...s, d }; }
   }
@@ -69,9 +76,9 @@ async function stopByName(base, name, lat, lon, signal) {
   const stops = await getJSON(`${base}/stops?q=${encodeURIComponent(String(name || '').slice(0, 50))}`, { signal, timeout: 9000 }).catch(() => []);
   return (Array.isArray(stops) ? stops : []).map(s => ({ ...s, d: hav([lat, lon], [s.py, s.px]) })).filter(s => s.d < 200).sort((a, b) => a.d - b.d)[0] || null;
 }
-export async function arrivals(stopName, lat, lon, line, { signal } = {}) {
+export async function arrivals(stopName, lat, lon, line, { signal, headsign } = {}) {
   const base = proxyUrl(); if (!base) return { off: true };
-  const near = (await stopByLine(base, line, lat, lon, signal)) || (await stopByName(base, stopName, lat, lon, signal));
+  const near = (await stopByLine(base, line, lat, lon, headsign, signal)) || (await stopByName(base, stopName, lat, lon, signal));
   if (!near) return { notFound: true };
   const j = await getJSON(`${base}/arrivals?stop=${near.cp}`, { signal, timeout: 9000 });
   const lines = j?.p?.l || [];
