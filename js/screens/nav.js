@@ -8,6 +8,8 @@ import { $, $$, T, esc, toast, modal, confirmDialog, speak, vibrate, waLink, osm
 
 const MODS = { 'slight left': 'upleft', 'slight right': 'upright', left: 'left', right: 'rightturn', 'sharp left': 'left', 'sharp right': 'rightturn', uturn: 'uturn', straight: 'up' };
 const TXT = { left: 'Vire à esquerda', right: 'Vire à direita', 'slight left': 'Siga levemente à esquerda', 'slight right': 'Siga levemente à direita', 'sharp left': 'Faça a curva fechada à esquerda', 'sharp right': 'Faça a curva fechada à direita', uturn: 'Faça o retorno', straight: 'Siga em frente' };
+// Vibração por direção, para quem não olha a tela: esquerda = 2 toques curtos, direita = 3, meia-volta = 1 longo.
+const turnBuzz = icon => /left/i.test(icon) ? [90, 70, 90] : /right/i.test(icon) ? [90, 70, 90, 70, 90] : icon === 'uturn' ? [450] : [150];
 export function stepInfo(st) {
   const on = st.name ? ` na ${st.name}`.replace(' na Rua ', ' na Rua ') : '';
   if (st.type === 'arrive') return { icon: 'pin', text: 'Você chegou ao destino' };
@@ -87,7 +89,7 @@ register('nav', (p) => {
       const ahead = L.polyline(ll, { color: '#D6336C', weight: 7, lineCap: 'round', lineJoin: 'round' }).addTo(grp);
       mapx.pin(dest.lat, dest.lon, { color: '#3B1766', svg: ic('pin', 18), size: 36 });
       const you = L.marker(ll[0], { icon: mapx.youIcon(true), keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(grp);
-      let s = 0, mult = 1, mode = (here.source === 'gps' && !p.custom) ? 'gps' : 'sim', follow = true, timer, watch, ended = false, announced = new Set(), t0 = Date.now(), firstView = true, lastOff = false;
+      let s = 0, mult = 1, mode = (here.source === 'gps' && !p.custom) ? 'gps' : 'sim', follow = true, timer, watch, ended = false, announced = new Set(), buzzed = new Set(), t0 = Date.now(), firstView = true, lastOff = false;
       const setMode = m => {
         mode = m; $$('[data-m]', el).forEach(b => { const on = (m === 'gps' && b.dataset.m === 'gps') || (m === 'sim' && b.dataset.m === 'sim:' + mult); b.setAttribute('aria-checked', on); b.style.background = on ? '#fff' : 'var(--night)'; b.style.color = on ? 'var(--plum)' : '#fff'; });
         if (watch != null) { navigator.geolocation.clearWatch(watch); watch = null; }
@@ -113,7 +115,8 @@ register('nav', (p) => {
         let j = starts.findIndex(v => v > s - 3); if (j < 0) j = rt.steps.length - 1; if (j === 0 && rt.steps.length > 1 && s < 8) j = 0;
         const st = rt.steps[j], info = stepInfo(st), dd = Math.max(0, starts[j] - s);
         $('#n-ic', el).innerHTML = ic(info.icon, 36); $('#n-d', el).textContent = dd < 8 && j > 0 ? 'Agora' : fmtDist(dd); $('#n-t', el).textContent = info.text;
-        if (!announced.has(j) && (dd <= 60 || j === 0) && !(j === 0 && announced.size)) { announced.add(j); const m = Math.round(dd / 10) * 10; speak(j === 0 ? info.text : (dd < 20 ? info.text : `Em ${m} metros, ${info.text}`)); if (j > 0) vibrate([180]); announce(info.text); }
+        if (!announced.has(j) && (dd <= 60 || j === 0) && !(j === 0 && announced.size)) { announced.add(j); const m = Math.round(dd / 10) * 10; speak(j === 0 ? info.text : (dd < 20 ? info.text : `Em ${m} metros, ${info.text}`)); if (j > 0) vibrate([120]); announce(info.text); }
+        if (j > 0 && dd < 8 && !buzzed.has(j)) { buzzed.add(j); vibrate(turnBuzz(info.icon)); }
         if (rem < 18 && !ended) arrive();
       };
       const arrive = () => { ended = true; const hadShare = !!store.get().share; endShare(); vibrate([200, 100, 200]); speak('Você chegou ao destino.'); r.go('arrived', { hadShare, dest, route: rt, secs: (Date.now() - t0) / 1000 }, { anim: 'fade', replace: true }); };

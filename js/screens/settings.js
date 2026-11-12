@@ -22,7 +22,7 @@ register('me', () => {
 register('a11y', () => ({
   opts: {},
   html: `<div class="scroll" style="gap:1rem">${header('Acessibilidade')}${a11yControls(store.get().settings)}
-    ${[['voice', 'volume', 'Voz de orientação', 'Fala as instruções durante a caminhada.'], ['vibrate', 'vibrate', 'Vibração', 'Avisos táteis em curvas e no SOS.']].map(([k, i, t, d]) => `<div class="row"><div class="tile alt">${ic(i, 22)}</div><div class="grow"><div class="strong">${t}</div><div class="small">${d}</div></div>${toggle('a-' + k, store.get().settings[k], t)}</div>`).join('')}
+    ${[['voice', 'volume', 'Voz de orientação', 'Fala as instruções durante a caminhada.'], ['vibrate', 'vibrate', 'Vibração', 'Aviso ao se aproximar da curva e no momento de virar (esquerda: 2 toques, direita: 3), na chegada e no SOS. Funciona em Android.']].map(([k, i, t, d]) => `<div class="row"><div class="tile alt">${ic(i, 22)}</div><div class="grow"><div class="strong">${t}</div><div class="small">${d}</div></div>${toggle('a-' + k, store.get().settings[k], t)}</div>`).join('')}
     <div class="banner alt">${ic('info', 18)}<span>Seguimos o WCAG 2.2 AA: contraste, foco visível, alvos de toque e alternativas ao botão de segurar.</span></div></div>`,
   mount(el, r) {
     bindA11y(el, r);
