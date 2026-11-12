@@ -107,7 +107,7 @@ register('transit', (p) => {
         if (l.mode === 'walk') return `<div class="hrow" style="align-items:flex-start"><div class="tile alt" style="width:2.25rem;height:2.25rem">${ic('walk', 18)}</div><div class="grow"><div class="strong">Caminhe ${fmtDist(l.dist)} · ${fmtMin(l.dur)}</div><div class="small">até ${esc(l.to.name || 'o destino')}</div></div>${l.a ? badge(l.a.score, true) : ''}</div>`;
         const col = l.color || MODE_COLOR[l.mode];
         return `<div class="card flat" style="padding:.75rem;gap:.5rem;border-color:${col}"><div class="hrow"><span class="badge" style="background:${col};color:#fff">${ic(MODE_ICON[l.mode], 14)} ${esc(l.line || T.MODE_LABEL[l.mode])}</span><div class="grow small">${esc(l.headsign ? 'sentido ' + l.headsign : l.lineLong)}</div><span class="cap">${l.stops + 1} paradas</span></div>
-          <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.start)} · Embarque</div><div class="small">${esc(l.from.name)}${l.wait > 1 ? ` · espera ${l.wait} min` : ''}</div></div>${badge(l.fromA?.score, true)}</div>
+          <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.start)} · Embarque</div><div class="small">${esc(l.from.name)}${l.wait > 1 ? ` · espera ${l.wait} min` : ''}</div>${l === it.legs.find(x => x.mode === 'bus') ? '<div class="small" data-live role="status" aria-live="polite" style="margin-top:.25rem"></div>' : ''}</div>${badge(l.fromA?.score, true)}</div>
           <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.end)} · Desembarque</div><div class="small">${esc(l.to.name)}</div></div>${badge(l.toA?.score, true)}</div></div>`;
       }).join('');
       const render = () => {
@@ -119,7 +119,6 @@ register('transit', (p) => {
             <div class="small">${hhmm(x.start)} → ${hhmm(x.end)} · <b>${fmtMin(x.dur)}</b> · ${x.transfers === 0 ? 'sem baldeação' : x.transfers + ' baldeaç' + (x.transfers === 1 ? 'ão' : 'ões')} · ${fmtDist(x.walk)} a pé</div></button>`).join('')}</div>
           ${a.weakest && a.weakest.a.score < 70 ? `<div class="banner ${tone(a.weakest.a.score) === 'risk' ? 'risk' : 'warn'}">${ic('alert', 18)}<span><b>Ponto mais frágil:</b> ${esc(a.weakest.name)} (${a.weakest.a.score}) — ponto fraco: ${esc(a.why)}.${a.weakest.wait > 4 ? ` Você esperaria cerca de ${a.weakest.wait} min ali.` : ''}</span></div>` : a.weakest ? `<div class="banner safe">${ic('shield', 18)}<span>Todos os pontos de parada desta opção têm segurança aceitável.</span></div>` : ''}
           ${osmFail ? `<div class="banner warn">${ic('info', 18)}<span>Dados de iluminação e comércio indisponíveis agora, então <b>não dá para calcular a nota</b>. Tente de novo em instantes.</span></div>` : ''}
-          <div id="live"></div>
           <div class="over" style="margin-top:.25rem">Passo a passo</div><div class="stack">${timeline(it)}</div>
           <div class="banner alt">${ic('info', 18)}<span>O score avalia calçadas e pontos de parada. <b>Não avalia o interior do veículo.</b></span></div>
           ${it.legs[0]?.mode === 'walk' && it.legs[0].dist > 30 ? `<button class="btn primary" data-walk>${ic('nav', 20)} Caminhar até o ponto de embarque</button>` : ''}
@@ -133,16 +132,17 @@ register('transit', (p) => {
         liveInfo(it, first);
       };
       const liveInfo = async (it, first) => {
-        const box = $('#live', body); if (!box || !first) return;
+        const box = $('[data-live]', body); if (!box || !first) return;
         if (!T.proxyUrl()) { box.remove(); return; }
-        box.innerHTML = `<div class="banner alt">${ic('loader', 18, 'spin')}<span>Consultando o Olho Vivo…</span></div>`;
+        const put = (cls, icon, html) => { box.innerHTML = `<span class="${cls}" style="display:inline-flex;align-items:center;gap:.3rem">${ic(icon, 14, icon === 'loader' ? 'spin' : '')}<span>${html}</span></span>`; };
+        put('', 'loader', 'Consultando o Olho Vivo…');
         try {
           const a = await T.arrivals(first.from.name, first.from.lat, first.from.lon, first.line, { signal: ctl.signal });
           if (!alive || list[sel] !== it) return;
-          if (a.notFound) box.innerHTML = `<div class="banner warn">${ic('info', 18)}<span>Não achei este ponto no Olho Vivo.</span></div>`;
-          else if (a.line) box.innerHTML = `<div class="banner safe">${ic('bus', 18)}<span><b>Ao vivo · ${esc(a.line.c)}:</b> ${a.line.t.length ? 'chega às ' + a.line.t.join(', ') : 'sem previsão agora'} no ponto ${esc(a.stop)}.</span></div>`;
-          else box.innerHTML = `<div class="banner warn">${ic('info', 18)}<span>Sem previsão ao vivo para a linha ${esc(first.line || '')} neste ponto${a.all?.length ? '. Passam aqui: ' + esc(a.all.slice(0, 4).map(x => x.c).join(', ')) : ''}.</span></div>`;
-        } catch { if (alive) box.innerHTML = `<div class="banner warn">${ic('info', 18)}<span>Tempo real indisponível agora (verifique o proxy em Perfil › Transporte).</span></div>`; }
+          if (a.notFound) put('', 'info', 'Sem previsão ao vivo: ponto não encontrado no Olho Vivo.');
+          else if (a.line && a.line.t.length) { box.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.3rem;color:#0B6B4C;font-weight:600">${ic("bus", 14)}<span>Ao vivo: chega às ${a.line.t.join(', ')}</span></span>`; }
+          else put('', 'info', 'Ao vivo: sem previsão para esta linha agora.');
+        } catch { if (alive) put('', 'info', 'Tempo real indisponível agora.'); }
       };
       const fallback = async (msg) => {
         body.innerHTML = head(`<div class="banner warn">${ic('alert', 18)}<span>${msg}</span></div><div class="head">Pontos de transporte perto de ${org.isHere ? 'você' : 'a partida'}</div><div id="near"><div class="skeleton" style="height:3rem"></div></div>`);
