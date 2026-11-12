@@ -38,12 +38,13 @@ export default {
       if (u.pathname === '/stops') { const t = (q.get('q') || '').trim(); if (t.length < 2 || t.length > 60) return json({ erro: 'q' }, 400, h); path = `/Parada/Buscar?termosBusca=${encodeURIComponent(t)}`; }
       else if (u.pathname === '/arrivals') { const s = q.get('stop') || ''; if (!/^\d{1,10}$/.test(s)) return json({ erro: 'stop' }, 400, h); path = `/Previsao/Parada?codigoParada=${s}`; }
       else if (u.pathname === '/lines') { const t = (q.get('q') || '').trim(); if (t.length < 1 || t.length > 40) return json({ erro: 'q' }, 400, h); path = `/Linha/Buscar?termosBusca=${encodeURIComponent(t)}`; }
+      else if (u.pathname === '/line-stops') { const l = q.get('line') || ''; if (!/^\d{1,10}$/.test(l)) return json({ erro: 'line' }, 400, h); path = `/Parada/BuscarParadasPorLinha?codigoLinha=${l}`; }
       else if (u.pathname === '/positions') { const l = q.get('line') || ''; if (!/^\d{1,10}$/.test(l)) return json({ erro: 'line' }, 400, h); path = `/Posicao/Linha?codigoLinha=${l}`; }
       else if (u.pathname === '/' || u.pathname === '/health') return json({ ok: true, servico: 'saferoute-sptrans-proxy' }, 200, h);
       else return json({ erro: 'rota' }, 404, h);
       const r = await olho(env, path);
       if (!r.ok) return json({ erro: 'upstream', status: r.status }, 502, h);
-      return json(await r.json(), 200, h, u.pathname === '/arrivals' ? 10 : 60);
+      return json(await r.json(), 200, h, u.pathname === '/arrivals' ? 10 : 300);
     } catch (e) { return json({ erro: 'falha', detalhe: String(e.message || e) }, 502, h); }
   }
 };

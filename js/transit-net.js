@@ -49,15 +49,33 @@ export async function planTransit(from, to, { signal } = {}) {
 // Proxy padrão (Cloudflare Worker, guarda o token da SPTrans). Um endereço salvo em Ajustes tem prioridade.
 export const DEFAULT_PROXY = 'https://saferoute-sptrans-proxy.juliamuniz0746.workers.dev';
 export const proxyUrl = () => ((store.get().settings.proxyUrl || '').trim() || DEFAULT_PROXY).replace(/\/+$/, '');
+const normL = x => String(x || '').toUpperCase().replace(/\s/g, '');
+// 1) pela linha: acha os sentidos da linha, lista os pontos deles (com coordenadas) e usa o mais perto do embarque.
+async function stopByLine(base, line, lat, lon, signal) {
+  const L = normL(line); if (!L) return null;
+  let ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L)}`, { signal, timeout: 9000 }).catch(() => []);
+  if (!Array.isArray(ls) || !ls.length) ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L.split('-')[0])}`, { signal, timeout: 9000 }).catch(() => []);
+  if (!Array.isArray(ls)) return null;
+  const exact = ls.filter(x => normL(`${x.lt}-${x.tl}`) === L), cand = (exact.length ? exact : ls.filter(x => normL(x.lt) === L.split('-')[0])).slice(0, 4);
+  let best = null;
+  for (const c of cand) {
+    const st = await getJSON(`${base}/line-stops?line=${c.cl}`, { signal, timeout: 9000 }).catch(() => []);
+    for (const s of Array.isArray(st) ? st : []) { const d = hav([lat, lon], [s.py, s.px]); if (d < 200 && (!best || d < best.d)) best = { ...s, d }; }
+  }
+  return best;
+}
+// 2) pelo nome do ponto (plano B).
+async function stopByName(base, name, lat, lon, signal) {
+  const stops = await getJSON(`${base}/stops?q=${encodeURIComponent(String(name || '').slice(0, 50))}`, { signal, timeout: 9000 }).catch(() => []);
+  return (Array.isArray(stops) ? stops : []).map(s => ({ ...s, d: hav([lat, lon], [s.py, s.px]) })).filter(s => s.d < 200).sort((a, b) => a.d - b.d)[0] || null;
+}
 export async function arrivals(stopName, lat, lon, line, { signal } = {}) {
   const base = proxyUrl(); if (!base) return { off: true };
-  const stops = await getJSON(`${base}/stops?q=${encodeURIComponent(stopName.slice(0, 50))}`, { signal, timeout: 9000 });
-  const near = (Array.isArray(stops) ? stops : []).map(s => ({ ...s, d: hav([lat, lon], [s.py, s.px]) })).filter(s => s.d < 150).sort((a, b) => a.d - b.d)[0];
+  const near = (await stopByLine(base, line, lat, lon, signal)) || (await stopByName(base, stopName, lat, lon, signal));
   if (!near) return { notFound: true };
   const j = await getJSON(`${base}/arrivals?stop=${near.cp}`, { signal, timeout: 9000 });
   const lines = j?.p?.l || [];
-  const norm = x => String(x || '').toUpperCase().replace(/\s/g, '');
-  const L = norm(line);
-  const hit = L ? lines.find(l => norm(l.c) === L || norm(l.c).startsWith(L) || L.startsWith(norm(l.c))) : null;
+  const L = normL(line);
+  const hit = L ? lines.find(l => normL(l.c) === L || normL(l.c).startsWith(L) || L.startsWith(normL(l.c))) : null;
   return { stop: near.np, all: lines.map(l => ({ c: l.c, to: l.lt0 === l.lt1 ? l.lt0 : l.lt1, t: (l.vs || []).map(v => v.t).slice(0, 3) })), line: hit ? { c: hit.c, t: (hit.vs || []).map(v => v.t).slice(0, 3) } : null };
 }
