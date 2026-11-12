@@ -59,7 +59,7 @@ async function stopByLine(base, line, lat, lon, headsign, signal) {
   const L = normL(line); if (!L) return null;
   let ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L)}`, { signal, timeout: 9000 }).catch(() => []);
   if (!Array.isArray(ls) || !ls.length) ls = await getJSON(`${base}/lines?q=${encodeURIComponent(L.split('-')[0])}`, { signal, timeout: 9000 }).catch(() => []);
-  if (!Array.isArray(ls)) return null;
+  if (!Array.isArray(ls) || !ls.length) return { outside: true };
   const exact = ls.filter(x => normL(`${x.lt}-${x.tl}`) === L), cand = (exact.length ? exact : ls.filter(x => normL(x.lt) === L.split('-')[0])).slice(0, 4);
   // destino de cada sentido: sl 1 = principal → secundário; sl 2 = secundário → principal
   const dest = c => c.sl === 1 ? c.ts : c.tp, sc = cand.map(c => (headsign ? overlap(headsign, dest(c)) : 0));
@@ -78,7 +78,9 @@ async function stopByName(base, name, lat, lon, signal) {
 }
 export async function arrivals(stopName, lat, lon, line, { signal, headsign } = {}) {
   const base = proxyUrl(); if (!base) return { off: true };
-  const near = (await stopByLine(base, line, lat, lon, headsign, signal)) || (await stopByName(base, stopName, lat, lon, signal));
+  const byLine = await stopByLine(base, line, lat, lon, headsign, signal);
+  if (byLine?.outside) return { outside: true };
+  const near = byLine || (await stopByName(base, stopName, lat, lon, signal));
   if (!near) return { notFound: true };
   const j = await getJSON(`${base}/arrivals?stop=${near.cp}`, { signal, timeout: 9000 });
   const lines = j?.p?.l || [];

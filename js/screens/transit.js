@@ -140,7 +140,8 @@ register('transit', (p) => {
           try {
             const a = await T.arrivals(leg.from.name, leg.from.lat, leg.from.lon, leg.line, { signal: ctl.signal, headsign: leg.headsign });
             if (!alive || list[sel] !== it) return;
-            if (a.notFound) put('info', 'Ao vivo: ponto não encontrado no Olho Vivo.');
+            if (a.outside) put('info', 'Sem tempo real: esta linha não consta no Olho Vivo (ele cobre só os ônibus da SPTrans na capital).');
+            else if (a.notFound) put('info', 'Sem tempo real: não achei o ponto de embarque no Olho Vivo.');
             else if (a.line && a.line.t.length) put('bus', `Ao vivo: chega às ${a.line.t.join(', ')}`, 'color:#0B6B4C;font-weight:600');
             else put('info', 'Sem previsão ao vivo agora (nenhum ônibus desta linha a caminho). Vale o horário programado.');
           } catch { if (alive) put('info', 'Tempo real indisponível agora.'); }
