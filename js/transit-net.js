@@ -46,7 +46,9 @@ export async function planTransit(from, to, { signal } = {}) {
 }
 
 /* ---------- tempo real (Olho Vivo via proxy próprio; o token fica só no servidor) ---------- */
-export const proxyUrl = () => (store.get().settings.proxyUrl || '').trim().replace(/\/+$/, '');
+// Proxy padrão (Cloudflare Worker, guarda o token da SPTrans). Um endereço salvo em Ajustes tem prioridade.
+export const DEFAULT_PROXY = 'https://saferoute-sptrans-proxy.juliamuniz0746.workers.dev';
+export const proxyUrl = () => ((store.get().settings.proxyUrl || '').trim() || DEFAULT_PROXY).replace(/\/+$/, '');
 export async function arrivals(stopName, lat, lon, line, { signal } = {}) {
   const base = proxyUrl(); if (!base) return { off: true };
   const stops = await getJSON(`${base}/stops?q=${encodeURIComponent(stopName.slice(0, 50))}`, { signal, timeout: 9000 });

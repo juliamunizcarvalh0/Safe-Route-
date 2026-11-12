@@ -215,6 +215,6 @@ register('transit-settings', () => ({
     const px = $('#px', el), st = $('#pxs', el);
     const clean = () => px.value.trim().replace(/\/+$/, '');
     $('#pxt', el).onclick = async () => { const u = clean(); if (!/^https:\/\//.test(u)) { st.style.color = 'var(--risk)'; st.textContent = 'Use um endereço que comece com https://'; return; } st.style.color = 'var(--ink-soft)'; st.textContent = 'Testando…'; try { const j = await net.getJSON(u + '/health', { timeout: 8000 }); st.style.color = 'var(--safe)'; st.textContent = j.ok ? 'Conectado ✓' : 'Respondeu, mas não parece o proxy do SafeRoute.'; } catch { st.style.color = 'var(--risk)'; st.textContent = 'Não consegui conectar. Confira o endereço e o ALLOWED_ORIGIN do proxy.'; } };
-    $('#pxs-save', el).onclick = () => { const u = clean(); if (u && !/^https:\/\//.test(u)) { st.style.color = 'var(--risk)'; st.textContent = 'Use um endereço que comece com https://'; return; } store.update(s => s.settings.proxyUrl = u); toast(u ? 'Tempo real ativado' : 'Tempo real desativado', 'check'); r.back(); };
+    $('#pxs-save', el).onclick = () => { const u = clean(); if (u && !/^https:\/\//.test(u)) { st.style.color = 'var(--risk)'; st.textContent = 'Use um endereço que comece com https://'; return; } store.update(s => s.settings.proxyUrl = u); toast(u ? 'Proxy salvo' : 'Proxy padrão restaurado', 'check'); r.back(); };
   }
 }));
