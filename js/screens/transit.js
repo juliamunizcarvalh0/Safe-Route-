@@ -103,16 +103,15 @@ register('transit', (p) => {
         it.legs.filter(l => l.mode !== 'walk').forEach(l => [[l.from, l.fromA], [l.to, l.toA]].forEach(([s, a]) => L.circleMarker([s.lat, s.lon], { radius: 8, weight: 3, color: '#fff', fillColor: colr(a?.score), fillOpacity: 1 }).addTo(grp).bindTooltip(esc(s.name) + (a?.score != null ? ' · ' + a.score : ''))));
       };
       const legChip = l => l.mode === 'walk' ? `<span class="badge alt">${ic('walk', 12)} ${fmtMin(l.dur)}</span>` : `<span class="badge" style="background:${l.color || MODE_COLOR[l.mode]};color:#fff">${ic(MODE_ICON[l.mode], 12)} ${esc(l.line || T.MODE_LABEL[l.mode])}</span>`;
-      const timeline = it => it.legs.map(l => {
+      const timeline = it => it.legs.map((l, k) => {
         if (l.mode === 'walk') return `<div class="hrow" style="align-items:flex-start"><div class="tile alt" style="width:2.25rem;height:2.25rem">${ic('walk', 18)}</div><div class="grow"><div class="strong">Caminhe ${fmtDist(l.dist)} · ${fmtMin(l.dur)}</div><div class="small">até ${esc(l.to.name || 'o destino')}</div></div>${l.a ? badge(l.a.score, true) : ''}</div>`;
         const col = l.color || MODE_COLOR[l.mode];
         return `<div class="card flat" style="padding:.75rem;gap:.5rem;border-color:${col}"><div class="hrow"><span class="badge" style="background:${col};color:#fff">${ic(MODE_ICON[l.mode], 14)} ${esc(l.line || T.MODE_LABEL[l.mode])}</span><div class="grow small">${esc(l.headsign ? 'sentido ' + l.headsign : l.lineLong)}</div><span class="cap">${l.stops + 1} paradas</span></div>
-          <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.start)} · Embarque</div><div class="small">${esc(l.from.name)}${l.wait > 1 ? ` · espera ${l.wait} min` : ''}</div>${l === it.legs.find(x => x.mode === 'bus') ? '<div class="small" data-live role="status" aria-live="polite" style="margin-top:.25rem"></div>' : ''}</div>${badge(l.fromA?.score, true)}</div>
+          <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.start)} · Embarque</div><div class="small">${esc(l.from.name)}${l.wait > 1 ? ` · espera ${l.wait} min` : ''}</div>${l.mode === 'bus' ? `<div class="small" data-live="${k}" role="status" aria-live="polite" style="margin-top:.25rem"></div>` : ''}</div>${badge(l.fromA?.score, true)}</div>
           <div class="hrow"><div class="grow"><div class="strong">${hhmm(l.end)} · Desembarque</div><div class="small">${esc(l.to.name)}</div></div>${badge(l.toA?.score, true)}</div></div>`;
       }).join('');
       const render = () => {
         const it = list[sel], a = it.a, l0 = label(a.score);
-        const first = it.legs.find(l => l.mode === 'bus'); // Olho Vivo cobre só ônibus
         body.innerHTML = head(`<div class="over">${list.length} ${list.length > 1 ? 'opções' : 'opção'} de viagem · agora</div>
           <div class="stack" role="group" aria-label="Opções de transporte público">${list.map((x, i) => `<button class="route-card" style="--rc:${x.label === 'Mais segura' ? '#0F8A62' : x.label === 'Mais rápida' ? '#D6336C' : '#3B1766'}" data-r="${i}" aria-pressed="${i === sel}"><div class="hrow"><span class="dot"></span><span class="head grow">${x.label}</span>${x.a.score != null ? `<span class="badge ${tone(x.a.score)}">${ic(tone(x.a.score) === 'safe' ? 'shield' : 'alert', 14)} ${x.a.score} · ${label(x.a.score).t}</span>` : '<span class="badge alt">Sem dados</span>'}</div>
             <div class="chips" style="gap:.25rem;align-items:center">${x.legs.map((l, k) => legChip(l) + (k < x.legs.length - 1 ? `<span class="cap">›</span>` : '')).join('')}</div>
@@ -129,20 +128,24 @@ register('transit', (p) => {
         $('[data-why]', body).onclick = () => whyModal(it, store.isNight());
         $('[data-share]', body).onclick = () => shareModal(`Vou de ${org.name} para ${dest.name} de transporte público: ${it.legs.filter(l => l.mode !== 'walk').map(l => (l.line || T.MODE_LABEL[l.mode]) + ' (embarque ' + hhmm(l.start) + ' em ' + l.from.name + ')').join(' → ')}. Chego por volta das ${hhmm(it.end)}. — SafeRoute`);
         requestAnimationFrame(() => fit(it.legs.flatMap(l => l.coords))); setTimeout(() => alive && fit(it.legs.flatMap(l => l.coords)), 500);
-        liveInfo(it, first);
+        liveInfo(it);
       };
-      const liveInfo = async (it, first) => {
-        const box = $('[data-live]', body); if (!box || !first) return;
-        if (!T.proxyUrl()) { box.remove(); return; }
-        const put = (cls, icon, html) => { box.innerHTML = `<span class="${cls}" style="display:inline-flex;align-items:center;gap:.3rem">${ic(icon, 14, icon === 'loader' ? 'spin' : '')}<span>${html}</span></span>`; };
-        put('', 'loader', 'Consultando o Olho Vivo…');
-        try {
-          const a = await T.arrivals(first.from.name, first.from.lat, first.from.lon, first.line, { signal: ctl.signal });
-          if (!alive || list[sel] !== it) return;
-          if (a.notFound) put('', 'info', 'Sem previsão ao vivo: ponto não encontrado no Olho Vivo.');
-          else if (a.line && a.line.t.length) { box.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.3rem;color:#0B6B4C;font-weight:600">${ic("bus", 14)}<span>Ao vivo: chega às ${a.line.t.join(', ')}</span></span>`; }
-          else put('', 'info', 'Ao vivo: sem previsão para esta linha agora.');
-        } catch { if (alive) put('', 'info', 'Tempo real indisponível agora.'); }
+      const liveInfo = (it) => {
+        if (!T.proxyUrl()) { $$('[data-live]', body).forEach(b => b.remove()); return; }
+        it.legs.forEach(async (leg, k) => {
+          if (leg.mode !== 'bus') return;
+          const box = $(`[data-live="${k}"]`, body); if (!box) return;
+          const put = (icon, html, style = '') => { box.innerHTML = `<span style="display:inline-flex;align-items:flex-start;gap:.3rem;${style}">${ic(icon, 14, icon === 'loader' ? 'spin' : '')}<span>${html}</span></span>`; };
+          put('loader', 'Consultando o Olho Vivo…');
+          try {
+            const a = await T.arrivals(leg.from.name, leg.from.lat, leg.from.lon, leg.line, { signal: ctl.signal });
+            if (!alive || list[sel] !== it) return;
+            const others = a.all?.filter(x => x.t.length).slice(0, 3).map(x => `${esc(x.c)} (${x.t[0]})`).join(', ');
+            if (a.notFound) put('info', 'Ao vivo: ponto não encontrado no Olho Vivo.');
+            else if (a.line && a.line.t.length) put('bus', `Ao vivo: chega às ${a.line.t.join(', ')}`, 'color:#0B6B4C;font-weight:600');
+            else put('info', `Ao vivo: nenhum ônibus desta linha previsto neste ponto agora.${others ? ' Passam por aqui: ' + others + '.' : ''}`);
+          } catch { if (alive) put('info', 'Tempo real indisponível agora.'); }
+        });
       };
       const fallback = async (msg) => {
         body.innerHTML = head(`<div class="banner warn">${ic('alert', 18)}<span>${msg}</span></div><div class="head">Pontos de transporte perto de ${org.isHere ? 'você' : 'a partida'}</div><div id="near"><div class="skeleton" style="height:3rem"></div></div>`);
