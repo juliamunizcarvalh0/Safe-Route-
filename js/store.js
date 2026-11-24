@@ -4,7 +4,7 @@ const defaults = () => ({
   v: 1,
   onboarded: false,
   consent: { location: false, reports: false, at: null },
-  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, bold: false, spacing: false, invert: false, dim: false, theme: 'auto', contrastLevel: 0, font: 'brand', focus: 'normal', rate: 'normal', voiceName: '', confirmVoice: false, sosHold: 2, toastMode: 'short', time: 'auto', proxyUrl: '', layers: { reports: true, hotspots: false } },
+  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, bold: false, spacing: false, invert: false, dim: false, theme: 'auto', contrastLevel: 0, font: 'brand', focus: 'normal', rate: 'normal', voiceName: '', confirmVoice: false, sosHold: 2, toastMode: 'short', tint: 'none', tapMode: 'simple', tapMin: 0, time: 'auto', proxyUrl: '', layers: { reports: true, hotspots: false } },
   guardians: [], places: [], recents: [], reports: [], votes: {}, trips: [], survey: null, contests: [], share: null
 });
 const mem = {};
@@ -41,6 +41,7 @@ export function applySettings() {
   r.dataset.bold = s.bold ? '1' : '0';
   r.dataset.spacing = s.spacing ? '1' : '0';
   r.dataset.invert = s.invert ? '1' : '0';
+  r.dataset.tint = s.tint || 'none';
 }
 export function uid() { return Math.random().toString(36).slice(2, 9); }
 export const hour = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };

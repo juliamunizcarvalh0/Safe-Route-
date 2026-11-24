@@ -74,10 +74,10 @@ register('nav', (p) => {
         <div class="eta"><div><b id="eta">—</b><div class="small" style="color:var(--on-dark-soft)" id="rem">—</div></div>${rt.a?.score != null ? `<span class="badge ${l.tone}">${ic('shield', 14)} ${rt.a.score} · ${l.t}</span>` : ''}</div>
         <div class="guard">${store.get().guardians.length ? `<div class="av">${store.get().guardians.slice(0, 3).map(g => `<span class="avatar rose">${esc(g.name[0].toUpperCase())}</span>`).join('')}</div><div class="grow">${T('Avise ' + esc(store.get().guardians[0].name) + (store.get().guardians.length > 1 ? ' e outras' : '') + ' pelo WhatsApp', 'Avise quem você confia')}</div>` : `${ic('users', 18)}<div class="grow">${T('Cadastre contatos de confiança em Rede.', 'Cadastre contatos em Rede.')}</div>`}</div>
         <div class="hrow" style="gap:.5rem"><button class="btn night" id="n-rep" style="flex:1">${ic('replay', 20)}Repetir</button><button class="btn night" id="n-pause" style="flex:1" aria-pressed="false">${ic('pause', 20)}Pausar voz</button></div>
-        <div class="actions3"><button class="btn night" id="a-share">${ic('share', 22)}Avisar</button><button class="btn night" id="a-rep">${ic('flag', 22)}Relatar</button><button class="btn night" id="a-hide">${ic('eyeoff', 22)}Esconder</button></div>
+        <div class="actions3"><button class="btn night" id="a-share">${ic('share', 22)}Avisar</button><button class="btn night" id="a-rep">${ic('flag', 22)}Relatar</button><button class="btn night" id="a-hide" data-critical>${ic('eyeoff', 22)}Esconder</button></div>
         <div class="hrow" id="sim" style="flex-wrap:wrap"><span class="small" style="color:var(--on-dark-soft)">${here.source === 'demo' ? 'Simulação' : 'Modo'}:</span>
           ${['sim:1', 'sim:4', 'sim:10', 'gps'].map(k => `<button class="chip" style="background:var(--night);color:#fff;box-shadow:inset 0 0 0 1.5px #5b4a8a" data-m="${k}" role="radio" aria-checked="false">${k === 'gps' ? ic('locate', 14) + 'GPS real' : '×' + k.split(':')[1]}</button>`).join('')}</div>
-        <div class="hrow"><button class="btn danger" id="a-sos" style="flex:1.2">${ic('shieldalert', 20)} SOS</button><button class="btn ghostd" id="a-end" style="flex:1">Encerrar</button></div>
+        <div class="hrow"><button class="btn danger" id="a-sos" style="flex:1.2">${ic('shieldalert', 20)} SOS</button><button class="btn ghostd" id="a-end" data-critical style="flex:1">Encerrar</button></div>
       </div>`,
     mount(el, r) {
       mapx.clear(); const map = mapx.get(), L = mapx.L(), grp = mapx.group();
@@ -166,7 +166,7 @@ register('sos', () => ({
     <p style="text-align:center;color:var(--on-dark-soft)">${T(`Segure o botão por ${store.get().settings.sosHold || 2} s para avisar seus contatos de confiança.`, `Segure o botão por ${store.get().settings.sosHold || 2} s.`)}</p>
     <div class="holdwrap"><svg viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="10"/><circle id="ring" cx="120" cy="120" r="108" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="679" stroke-dashoffset="679"/></svg>
       <button class="holdbtn" id="hold" aria-label="SOS. Segure por ${store.get().settings.sosHold || 2} segundos para ativar"><span>SOS</span></button></div>
-    <div class="stack" style="gap:.625rem"><button class="btn white" id="alt">Ativar sem segurar (confirmar)</button><a class="btn ghostd" href="tel:190">${ic('phone', 20)} Ligar 190 · Polícia</a><button class="btn ghostd" id="hide">${ic('eyeoff', 20)} Esconder o app (modo discreto)</button></div>
+    <div class="stack" style="gap:.625rem"><button class="btn white" id="alt">Ativar sem segurar (confirmar)</button><a class="btn ghostd" href="tel:190">${ic('phone', 20)} Ligar 190 · Polícia</a><button class="btn ghostd" id="hide" data-critical>${ic('eyeoff', 20)} Esconder o app (modo discreto)</button></div>
     <p class="small" style="color:var(--on-dark-soft);text-align:center">Em perigo imediato, ligue 190. O SafeRoute não substitui os serviços de emergência.</p></div>`,
   mount(el, r) {
     const hold = $('#hold', el), ring = $('#ring', el); let raf, t0 = 0, active = false;

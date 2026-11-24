@@ -7,8 +7,23 @@ import './screens/community.js';
 import './screens/settings.js';
 import './screens/transit.js';
 import { $ } from './ui.js';
+import * as ui from './ui.js';
 
 store.applySettings();
+// MobileDU 6.3 e 6.4: o jeito de tocar é escolhido pela pessoa (só vale para toque na tela; teclado e leitor de tela passam direto)
+{
+  let down = 0, last = null, lastAt = 0;
+  document.addEventListener('pointerdown', () => { down = Date.now(); }, true);
+  document.addEventListener('click', e => {
+    if (!e.detail) return;
+    const st = store.get().settings, held = Date.now() - down;
+    if (st.tapMin && held < st.tapMin) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+    const b = e.target.closest && e.target.closest('[data-critical]'); if (!b || st.tapMode === 'simple') return;
+    if (st.tapMode === 'long') { if (held < 600) { e.stopImmediatePropagation(); e.preventDefault(); ui.toast('Segure o botão por um instante para confirmar.'); } return; }
+    if (last === b && Date.now() - lastAt < 1500) { last = null; return; }
+    e.stopImmediatePropagation(); e.preventDefault(); last = b; lastAt = Date.now(); ui.toast('Toque de novo para confirmar.');
+  }, true);
+}
 const fit = () => {
   const d = $('#device'); if (window.matchMedia('(max-width:760px),(max-height:620px)').matches) { d.style.transform = ''; return; }
   const sc = Math.min(1, (innerHeight - 24) / 870, (innerWidth - 24) / 420);

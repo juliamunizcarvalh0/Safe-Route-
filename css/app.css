@@ -312,3 +312,9 @@ html[data-font="legible"] *{font-family:Verdana,Tahoma,"DejaVu Sans",sans-serif!
 html[data-focus="thick"] :focus-visible{outline:6px solid #111;outline-offset:3px;box-shadow:0 0 0 9px #fff}
 #toast.sticky{pointer-events:auto}
 #toast .tclose{margin-left:auto;width:2.75rem;height:2.75rem;display:grid;place-items:center;border-radius:50%;color:inherit;pointer-events:auto}
+
+/* MobileDU 1.4: filtro de cor da tela (película) */
+html[data-tint]:not([data-tint="none"]) body::after{content:"";position:fixed;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:2147483000}
+html[data-tint="yellow"] body::after{background:#FFE9A0}
+html[data-tint="sepia"] body::after{background:#EBD3B0}
+html[data-tint="green"] body::after{background:#CDEFD6}
