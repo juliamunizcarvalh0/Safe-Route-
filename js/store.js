@@ -4,7 +4,7 @@ const defaults = () => ({
   v: 1,
   onboarded: false,
   consent: { location: false, reports: false, at: null },
-  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, time: 'auto', proxyUrl: '', layers: { reports: true, hotspots: false } },
+  settings: { fontScale: 1, contrast: false, big: false, simple: false, voice: true, vibrate: true, reduce: false, bold: false, spacing: false, invert: false, dim: false, theme: 'auto', contrastLevel: 0, font: 'brand', focus: 'normal', rate: 'normal', voiceName: '', confirmVoice: false, sosHold: 2, toastMode: 'short', time: 'auto', proxyUrl: '', layers: { reports: true, hotspots: false } },
   guardians: [], places: [], recents: [], reports: [], votes: {}, trips: [], survey: null, contests: [], share: null
 });
 const mem = {};
@@ -31,9 +31,16 @@ export function exportData() { return JSON.stringify({ app: 'SafeRoute', exporte
 export function applySettings() {
   const s = state.settings, r = document.documentElement;
   r.style.fontSize = (16 * s.fontScale) + 'px';
-  r.dataset.contrast = s.contrast ? 'high' : 'normal';
+  const mq = q => { try { return matchMedia(q).matches; } catch { return false; } };
+  const lvl = s.contrastLevel || (s.contrast ? 2 : 0) || (mq('(prefers-contrast: more)') ? 1 : 0);
+  r.dataset.contrast = lvl === 2 ? 'high' : lvl === 1 ? 'mid' : 'normal';
+  r.dataset.theme = s.theme === 'dark' || (s.theme !== 'light' && mq('(prefers-color-scheme: dark)')) ? 'dark' : 'light';
+  r.dataset.dim = s.dim ? '1' : '0'; r.dataset.font = s.font || 'brand'; r.dataset.focus = s.focus || 'normal';
   r.dataset.big = s.big ? '1' : '0';
   r.dataset.reduce = s.reduce ? '1' : '0';
+  r.dataset.bold = s.bold ? '1' : '0';
+  r.dataset.spacing = s.spacing ? '1' : '0';
+  r.dataset.invert = s.invert ? '1' : '0';
 }
 export function uid() { return Math.random().toString(36).slice(2, 9); }
 export const hour = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
