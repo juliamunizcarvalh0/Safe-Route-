@@ -35,7 +35,7 @@ register('home', () => {
   const recents = st.recents.slice(0, 2).map((p, i) => `<button class="sugg" data-recent="${i}"><div class="tile alt">${ic('clock', 20)}</div><div class="grow"><div class="strong">${esc(p.name)}</div><div class="small">${esc(p.sub || '')}</div></div>${ic('right', 18)}</button>`).join('');
   return {
     opts: { map: true, tabs: true },
-    html: `<div class="topbar"><button class="search hit" data-search aria-label="Buscar destino">${ic('search', 22)}<span>${T('Para onde vamos?', 'Para onde você vai?')}</span></button>${st.share ? `<div class="banner safe hit" style="margin-top:.5rem">${ic('share', 18)}<span class="grow">Aviso ativo${st.share.dest ? ' para ' + esc(st.share.dest) : ''}. Expira em até 3 h.</span><button class="chip" data-endshare>Encerrar</button></div>` : ''}</div>
+    html: `<div class="topbar"><button class="search hit" data-search aria-label="Buscar destino">${ic('search', 22)}<span>${T('Para onde vamos?', 'Para onde você vai?')}</span></button>${st.share ? `<div class="banner safe hit" style="margin-top:.5rem">${ic('share', 18)}<span class="grow">Aviso ativo${st.share.dest ? ' para ' + esc(st.share.dest) : ''}. Expira em até 3 h.</span><button class="chip" data-endshare data-critical>Encerrar</button></div>` : ''}</div>
       <div class="hit" style="position:absolute;right:1rem;top:7.5rem;display:flex;flex-direction:column;gap:.625rem;align-items:flex-end">
         <button class="fab round" data-zin aria-label="Aproximar o mapa">${ic('plus', 22)}</button>
         <button class="fab round" data-zout aria-label="Afastar o mapa">${ic('minus', 22)}</button>

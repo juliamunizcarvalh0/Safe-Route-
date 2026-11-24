@@ -66,6 +66,7 @@ export function a11yControls(s) { // versão curta, usada no início
 export function a11yFull(s) { // versão completa, em Ajustes › Acessibilidade
   const sec = t => `<div class="over" style="margin-top:.5rem">${t}</div>`;
   return `${sec('Ver melhor')}${chipRow(s, 'theme', 'contrast', 'Tema de cor', 'Claro, escuro ou igual ao do seu celular.', THEME)}
+  ${chipRow(s, 'tint', 'contrast', 'Filtro de cor da tela', 'Uma película de cor sobre a tela, como uma lente.', [['none', 'Nenhum'], ['yellow', 'Amarelo'], ['sepia', 'Sépia'], ['green', 'Verde']])}
   ${chipRow(s, 'contrastLevel', 'contrast', 'Contraste do texto', 'Quanto mais forte, mais escuro o texto e as bordas.', CONTR)}
   ${tgl(s, 'dim', 'sun', 'Reduzir brilho', 'Deixa as cores claras menos fortes.')}${tgl(s, 'invert', 'contrast', 'Inverter cores', 'Troca claro e escuro para ler com menos brilho.')}${tgl(s, 'reduce', 'sliders', 'Reduzir movimento', 'Menos animações e nada piscando.')}
   ${sec('Ler melhor')}${sizeCard(s)}${chipRow(s, 'font', 'type', 'Tipo de letra', 'A do app ou a do seu celular, mais familiar.', [['brand', 'Do app'], ['system', 'Do celular'], ['legible', 'Bem legível']])}
@@ -74,6 +75,8 @@ export function a11yFull(s) { // versão completa, em Ajustes › Acessibilidade
   <div class="card"><div class="hrow"><div class="tile alt">${ic('volume', 22)}</div><div class="grow"><div class="strong">Qual voz</div><div class="small">Escolha a voz que seu celular tem em português.</div></div></div><select id="vv" class="input" aria-label="Qual voz" style="margin-top:.625rem"><option value="">Automática</option></select></div>
   ${tgl(s, 'confirmVoice', 'msg', 'Confirmar falando', 'Fala em voz alta avisos como "Relato enviado".')}${tgl(s, 'vibrate', 'vibrate', 'Vibração', 'Aviso ao se aproximar da curva (esquerda: 2 toques, direita: 3), na chegada e no SOS. Funciona em Android.')}
   ${sec('Tocar e usar')}${tgl(s, 'big', 'access', 'Botões grandes', 'Áreas de toque maiores.')}${chipRow(s, 'focus', 'access', 'Contorno de foco', 'A borda que mostra onde você está ao usar teclado.', [['normal', 'Padrão'], ['thick', 'Grosso']])}
+  ${chipRow(s, 'tapMode', 'access', 'Como tocar nos botões de encerrar e esconder', 'Evita toques sem querer em Encerrar e Esconder. Quem usa teclado não precisa confirmar.', [['simple', 'Toque simples'], ['double', 'Toque duplo'], ['long', 'Segurar']])}
+  ${chipRow(s, 'tapMin', 'access', 'Ignorar toques muito rápidos', 'Ajuda a evitar toques por tremor na mão. Só vale quando você toca na tela.', [[0, 'Não ignorar'], [150, '0,15 s'], [300, '0,3 s']])}
   ${chipRow(s, 'sosHold', 'shieldalert', 'Tempo para segurar o SOS', 'Quanto tempo segurar o botão. Há sempre o botão alternativo, sem segurar.', [[1, '1 s'], [2, '2 s'], [4, '4 s']])}
   ${chipRow(s, 'toastMode', 'info', 'Tempo dos avisos', 'Quanto tempo os avisos ficam na tela.', [['short', '3 s'], ['long', '8 s'], ['sticky', 'Até eu fechar']])}`;
 }
@@ -82,7 +85,7 @@ export function bindA11y(el, r) {
   if (fs) fs.oninput = () => { const [v, l] = FONT_STEPS[+fs.value]; store.update(s => s.settings.fontScale = v); store.applySettings(); $('#fs-label', el).textContent = l; fs.setAttribute('aria-valuetext', l); };
   ['big', 'simple', 'reduce', 'invert', 'bold', 'spacing', 'dim', 'confirmVoice'].forEach(k => { const t = $('#a-' + k, el); if (t) bindToggle(t, v => { store.update(s => s.settings[k] = v); store.applySettings(); }); });
   $$('[data-opt]', el).forEach(b => b.onclick = () => {
-    const k = b.dataset.opt; let v = b.dataset.v; if (['contrastLevel', 'sosHold'].includes(k)) v = +v;
+    const k = b.dataset.opt; let v = b.dataset.v; if (['contrastLevel', 'sosHold', 'tapMin'].includes(k)) v = +v;
     store.update(s => { s.settings[k] = v; if (k === 'contrastLevel') s.settings.contrast = v === 2; }); store.applySettings();
     $$(`[data-opt="${k}"]`, el).forEach(x => x.setAttribute('aria-checked', x === b));
   });
