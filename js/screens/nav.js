@@ -4,7 +4,7 @@ import * as mapx from '../map.js';
 import { here, cumulative, pointAt, makeProj, distPtSeg, hav, fmtDist, fmtMin } from '../geo.js';
 import { ic } from '../icons.js';
 import { label } from '../score.js';
-import { $, $$, T, esc, toast, modal, confirmDialog, speak, vibrate, waLink, osmLink, announce, resizable } from '../ui.js';
+import { $, $$, T, esc, toast, modal, confirmDialog, speak, pauseVoice, vibrate, waLink, osmLink, announce, resizable } from '../ui.js';
 
 const MODS = { 'slight left': 'upleft', 'slight right': 'upright', left: 'left', right: 'rightturn', 'sharp left': 'left', 'sharp right': 'rightturn', uturn: 'uturn', straight: 'up' };
 const TXT = { left: 'Vire à esquerda', right: 'Vire à direita', 'slight left': 'Siga levemente à esquerda', 'slight right': 'Siga levemente à direita', 'sharp left': 'Faça a curva fechada à esquerda', 'sharp right': 'Faça a curva fechada à direita', uturn: 'Faça o retorno', straight: 'Siga em frente' };
@@ -68,10 +68,12 @@ register('nav', (p) => {
     html: `<div class="nav-top hit" role="status"><div class="nav-turn" id="n-ic">${ic('up', 36)}</div><div class="grow"><div class="h-n" id="n-d" style="font-size:1.75rem">—</div><div id="n-t" style="font-weight:600">Preparando…</div></div>
         <button class="iconbtn" id="n-voice" style="background:rgba(255,255,255,.14);color:#fff;box-shadow:none" aria-pressed="${store.get().settings.voice}" aria-label="Voz de orientação">${ic('volume', 20)}</button></div>
       <div id="off" class="hit banner risk" style="position:absolute;left:1rem;right:1rem;top:9.75rem;display:none;box-shadow:var(--shadow-lg)">${ic('alert', 18)}<span>Você saiu da rota. Volte ao caminho ou recalcule.</span></div>
+      <div class="hit" style="position:absolute;right:1rem;top:12.5rem;display:flex;flex-direction:column;gap:.5rem"><button class="fab round" id="n-zin" aria-label="Aproximar o mapa">${ic('plus', 22)}</button><button class="fab round" id="n-zout" aria-label="Afastar o mapa">${ic('minus', 22)}</button></div>
       <button class="fab abs round hit" id="n-follow" style="right:1rem;top:9.75rem;display:none" aria-label="Centralizar no meu local">${ic('locate', 22)}</button>
       <div class="sheet nightsheet"><div class="grab"></div>
         <div class="eta"><div><b id="eta">—</b><div class="small" style="color:var(--on-dark-soft)" id="rem">—</div></div>${rt.a?.score != null ? `<span class="badge ${l.tone}">${ic('shield', 14)} ${rt.a.score} · ${l.t}</span>` : ''}</div>
         <div class="guard">${store.get().guardians.length ? `<div class="av">${store.get().guardians.slice(0, 3).map(g => `<span class="avatar rose">${esc(g.name[0].toUpperCase())}</span>`).join('')}</div><div class="grow">${T('Avise ' + esc(store.get().guardians[0].name) + (store.get().guardians.length > 1 ? ' e outras' : '') + ' pelo WhatsApp', 'Avise quem você confia')}</div>` : `${ic('users', 18)}<div class="grow">${T('Cadastre contatos de confiança em Rede.', 'Cadastre contatos em Rede.')}</div>`}</div>
+        <div class="hrow" style="gap:.5rem"><button class="btn night" id="n-rep" style="flex:1">${ic('replay', 20)}Repetir</button><button class="btn night" id="n-pause" style="flex:1" aria-pressed="false">${ic('pause', 20)}Pausar voz</button></div>
         <div class="actions3"><button class="btn night" id="a-share">${ic('share', 22)}Avisar</button><button class="btn night" id="a-rep">${ic('flag', 22)}Relatar</button><button class="btn night" id="a-hide">${ic('eyeoff', 22)}Esconder</button></div>
         <div class="hrow" id="sim" style="flex-wrap:wrap"><span class="small" style="color:var(--on-dark-soft)">${here.source === 'demo' ? 'Simulação' : 'Modo'}:</span>
           ${['sim:1', 'sim:4', 'sim:10', 'gps'].map(k => `<button class="chip" style="background:var(--night);color:#fff;box-shadow:inset 0 0 0 1.5px #5b4a8a" data-m="${k}" role="radio" aria-checked="false">${k === 'gps' ? ic('locate', 14) + 'GPS real' : '×' + k.split(':')[1]}</button>`).join('')}</div>
@@ -126,6 +128,9 @@ register('nav', (p) => {
       setMode(mode);
       map.on('dragstart', () => { follow = false; $('#n-follow', el).style.display = 'flex'; });
       $('#n-follow', el).onclick = () => { follow = true; $('#n-follow', el).style.display = 'none'; update(); };
+      $('#n-zin', el).onclick = () => map.zoomIn(); $('#n-zout', el).onclick = () => map.zoomOut();
+      $('#n-rep', el).onclick = () => speak(speak.last || 'Ainda não há instrução.', true);
+      $('#n-pause', el).onclick = e => { const b = e.currentTarget, on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); pauseVoice(on); b.lastChild.textContent = on ? 'Retomar voz' : 'Pausar voz'; };
       const v = $('#n-voice', el); v.onclick = () => { const on = !store.get().settings.voice; store.update(x => x.settings.voice = on); v.setAttribute('aria-pressed', on); v.style.opacity = on ? 1 : .5; if (!on) speechSynthesis?.cancel(); toast(on ? 'Voz ligada' : 'Voz desligada', 'volume'); };
       v.style.opacity = store.get().settings.voice ? 1 : .5;
       $('#a-share', el).onclick = () => { store.update(s => s.share = { dest: dest?.name || null, ts: Date.now() }); shareModal(alertText(dest), 'Avisar alguém de confiança', 'Compartilhamento encerra quando você chegar ou encerrar a caminhada.'); };
@@ -158,16 +163,16 @@ export function sosMessage() { return `🚨 PRECISO DE AJUDA. Minha localizaçã
 register('sos', () => ({
   opts: { cls: 'night sos-bg', darkbar: true },
   html: `<div class="scroll" style="align-items:stretch;gap:1.25rem">${`<div class="hdr"><button class="iconbtn" data-back aria-label="Voltar" style="background:rgba(255,255,255,.14);color:#fff;box-shadow:none">${ic('back', 22)}</button><h1 class="grow" tabindex="-1" style="font-family:Fraunces,serif;font-size:1.375rem;font-weight:600">Pedir ajuda</h1></div>`}
-    <p style="text-align:center;color:var(--on-dark-soft)">${T('Segure o botão por 2 segundos para avisar seus contatos de confiança.', 'Segure o botão por 2 segundos.')}</p>
+    <p style="text-align:center;color:var(--on-dark-soft)">${T(`Segure o botão por ${store.get().settings.sosHold || 2} s para avisar seus contatos de confiança.`, `Segure o botão por ${store.get().settings.sosHold || 2} s.`)}</p>
     <div class="holdwrap"><svg viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="10"/><circle id="ring" cx="120" cy="120" r="108" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="679" stroke-dashoffset="679"/></svg>
-      <button class="holdbtn" id="hold" aria-label="SOS. Segure por 2 segundos para ativar"><span>SOS</span></button></div>
+      <button class="holdbtn" id="hold" aria-label="SOS. Segure por ${store.get().settings.sosHold || 2} segundos para ativar"><span>SOS</span></button></div>
     <div class="stack" style="gap:.625rem"><button class="btn white" id="alt">Ativar sem segurar (confirmar)</button><a class="btn ghostd" href="tel:190">${ic('phone', 20)} Ligar 190 · Polícia</a><button class="btn ghostd" id="hide">${ic('eyeoff', 20)} Esconder o app (modo discreto)</button></div>
     <p class="small" style="color:var(--on-dark-soft);text-align:center">Em perigo imediato, ligue 190. O SafeRoute não substitui os serviços de emergência.</p></div>`,
   mount(el, r) {
     const hold = $('#hold', el), ring = $('#ring', el); let raf, t0 = 0, active = false;
     const reset = () => { cancelAnimationFrame(raf); active = false; t0 = 0; hold.classList.remove('holding'); ring.style.transition = 'stroke-dashoffset .3s'; ring.style.strokeDashoffset = 679; };
     const trigger = () => { reset(); vibrate([200, 100, 200, 100, 400]); r.go('sos-active', {}, { anim: 'fade', replace: true }); };
-    const loop = () => { const f = Math.min(1, (performance.now() - t0) / 2000); ring.style.strokeDashoffset = 679 * (1 - f); if (f >= 1) trigger(); else raf = requestAnimationFrame(loop); };
+    const loop = () => { const f = Math.min(1, (performance.now() - t0) / ((store.get().settings.sosHold || 2) * 1000)); ring.style.strokeDashoffset = 679 * (1 - f); if (f >= 1) trigger(); else raf = requestAnimationFrame(loop); };
     const start = e => { if (active) return; active = true; t0 = performance.now(); hold.classList.add('holding'); ring.style.transition = 'none'; vibrate(30); raf = requestAnimationFrame(loop); };
     hold.addEventListener('pointerdown', e => { e.preventDefault(); hold.setPointerCapture?.(e.pointerId); start(); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => hold.addEventListener(ev, reset));

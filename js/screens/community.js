@@ -102,14 +102,14 @@ register('guardian-add', () => ({
   opts: {},
   html: `<div class="scroll" style="gap:1rem">${header('Nova pessoa de confiança')}
     <p class="lead">${T('Ela vai receber seus avisos e o SOS pelo WhatsApp.', 'Ela recebe seus avisos.')}</p>
-    <div class="field"><label for="gn">Nome</label><input id="gn" class="input" autocomplete="off" maxlength="40" placeholder="Ex.: Mãe, Ana"></div>
-    <div class="field"><label for="gp">Celular com DDD</label><input id="gp" class="input" type="tel" inputmode="tel" autocomplete="off" placeholder="(11) 91234-5678" aria-describedby="gerr"><div id="gerr" class="small" style="color:var(--risk);min-height:1.2em" role="alert"></div></div>
-    <label class="row" style="cursor:pointer"><input type="checkbox" id="gok" style="width:1.5rem;height:1.5rem;accent-color:var(--plum)"><span class="grow small" style="color:var(--ink)">Já avisei essa pessoa que ela é meu contato de confiança.</span></label>
-    </div><div class="bar-fixed"><button class="btn primary" id="sv" disabled>Salvar contato</button></div>`,
+    <div class="field"><label for="gn">Nome (obrigatório)</label><input id="gn" class="input" autocomplete="name" aria-required="true" required maxlength="40" placeholder="Ex.: Mãe, Ana"></div>
+    <div class="field"><label for="gp">Celular com DDD (obrigatório)</label><input id="gp" class="input" type="tel" inputmode="tel" autocomplete="tel-national" aria-required="true" required placeholder="(11) 91234-5678" aria-describedby="gerr"><div id="gerr" class="small" style="color:var(--risk);min-height:1.2em" role="alert"></div></div>
+    <label class="row" style="cursor:pointer"><input type="checkbox" id="gok" style="width:1.5rem;height:1.5rem;accent-color:var(--plum)"><span class="grow small" style="color:var(--ink)">Já avisei essa pessoa que ela é meu contato de confiança (obrigatório).</span></label>
+    </div><div class="bar-fixed"><p class="small" id="why" style="margin-bottom:.5rem;color:var(--ink)">Para salvar: preencha o nome e marque a confirmação acima.</p><button class="btn primary" id="sv" disabled>Salvar contato</button></div>`,
   mount(el, r) {
     const n = $('#gn', el), p = $('#gp', el), ok = $('#gok', el), b = $('#sv', el), err = $('#gerr', el);
     const digits = () => p.value.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
-    const check = () => { b.disabled = !(n.value.trim() && ok.checked); };
+    const why = $('#why', el); const check = () => { b.disabled = !(n.value.trim() && ok.checked); why.hidden = !b.disabled; };
     [n, p, ok].forEach(x => x.addEventListener('input', check)); ok.addEventListener('change', check);
     b.onclick = () => {
       const d = digits(); if (d.length < 10 || d.length > 11) { err.textContent = 'Digite o DDD e o número (10 ou 11 dígitos).'; p.focus(); return; }

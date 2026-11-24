@@ -6,9 +6,12 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 // linguagem simples: T('texto normal','texto simples')
 export const T = (n, s) => (store.get().settings.simple && s) ? s : n;
 export function toast(msg, icon = 'info', ms = 2600) {
-  const t = $('#toast'); t.innerHTML = ic(icon, 20) + `<span>${esc(msg)}</span>`;
-  t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), ms);
-  announce(msg);
+  const st = store.get().settings, mode = st.toastMode || 'short', sticky = mode === 'sticky';
+  if (mode === 'long') ms = Math.max(ms, 8000);
+  const t = $('#toast'); t.innerHTML = ic(icon, 20) + `<span>${esc(msg)}</span>` + (sticky ? `<button class="tclose" aria-label="Fechar aviso">${ic('x', 18)}</button>` : '');
+  t.classList.add('show'); t.classList.toggle('sticky', sticky); clearTimeout(toast._t);
+  if (sticky) { const b = $('.tclose', t); if (b) b.onclick = () => t.classList.remove('show'); } else toast._t = setTimeout(() => t.classList.remove('show'), ms);
+  announce(msg); if (st.confirmVoice) speak(msg, true);
 }
 export function announce(msg) { const l = $('#live-region'); l.textContent = ''; setTimeout(() => l.textContent = msg, 30); }
 export function vibrate(p) { if (store.get().settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch {} }
@@ -19,6 +22,7 @@ let voicePick;
 function pickVoice() {
   const all = speechSynthesis.getVoices();
   if (!all.length) return null;
+  const want = store.get().settings.voiceName; if (want) { const w = all.find(v => v.name === want); if (w) return w; }
   if (voicePick && all.includes(voicePick)) return voicePick;
   const br = all.filter(v => /^pt[-_]BR/i.test(v.lang));
   const pool = br.length ? br : all.filter(v => /^pt/i.test(v.lang));
@@ -26,10 +30,12 @@ function pickVoice() {
   return voicePick;
 }
 if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => { voicePick = null; }); } catch {} }
-export function speak(text) {
-  if (!store.get().settings.voice || !('speechSynthesis' in window)) return;
+export function pauseVoice(on) { try { on ? speechSynthesis.pause() : speechSynthesis.resume(); } catch {} }
+export function speak(text, force) {
+  if ((!force && !store.get().settings.voice) || !('speechSynthesis' in window)) return;
+  speak.last = text;
   try {
-    speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = 1;
+    speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = ({ slow: 0.75, fast: 1.25 })[store.get().settings.rate] || 1;
     const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; if (!FEM.test(v.name)) u.pitch = 1.25; } else u.pitch = 1.25;
     speechSynthesis.speak(u);
   } catch {}

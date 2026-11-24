@@ -37,6 +37,8 @@ register('home', () => {
     opts: { map: true, tabs: true },
     html: `<div class="topbar"><button class="search hit" data-search aria-label="Buscar destino">${ic('search', 22)}<span>${T('Para onde vamos?', 'Para onde você vai?')}</span></button>${st.share ? `<div class="banner safe hit" style="margin-top:.5rem">${ic('share', 18)}<span class="grow">Aviso ativo${st.share.dest ? ' para ' + esc(st.share.dest) : ''}. Expira em até 3 h.</span><button class="chip" data-endshare>Encerrar</button></div>` : ''}</div>
       <div class="hit" style="position:absolute;right:1rem;top:7.5rem;display:flex;flex-direction:column;gap:.625rem;align-items:flex-end">
+        <button class="fab round" data-zin aria-label="Aproximar o mapa">${ic('plus', 22)}</button>
+        <button class="fab round" data-zout aria-label="Afastar o mapa">${ic('minus', 22)}</button>
         <button class="fab round" data-locate aria-label="Minha localização">${ic('locate', 22)}</button>
         <button class="fab round" data-layer="reports" aria-pressed="${s.layers.reports}" aria-label="Mostrar relatos no mapa" style="${s.layers.reports ? 'background:var(--plum);color:#fff' : ''}">${ic('flag', 22)}</button>
         <button class="fab round" data-layer="hotspots" aria-pressed="${s.layers.hotspots}" aria-label="Mostrar áreas de atenção (dados ilustrativos)" style="${s.layers.hotspots ? 'background:var(--plum);color:#fff' : ''}">${ic('layers', 22)}</button>
@@ -59,6 +61,7 @@ register('home', () => {
       const es = $('[data-endshare]', el); if (es) es.onclick = () => { store.update(x => x.share = null); r.reset('home', {}, 'fade'); toast('Aviso encerrado', 'check'); };
       $('[data-search]', el).onclick = () => r.go('search', { mode: 'dest' }, { anim: 'up' });
       $('[data-sos]', el).onclick = () => r.go('sos', {}, { anim: 'up' });
+      $('[data-zin]', el).onclick = () => mapx.get()?.zoomIn(); $('[data-zout]', el).onclick = () => mapx.get()?.zoomOut();
       $('[data-locate]', el).onclick = async () => {
         if (!store.get().consent.location) { askLocation(r); return; }
         try { await requestGPS(); drawAll(); mapx.flyTo(here.lat, here.lon, 16, 110); } catch { toast('Não consegui sua localização agora.', 'alert'); mapx.flyTo(here.lat, here.lon, 16, 110); }
